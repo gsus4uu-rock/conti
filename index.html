@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1E2433">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="찬양콘티">
+<title>맛있는교회 찬양 콘티</title>
+<style>
+body{margin:0;background:#FBF9F6;color:#1E2433;display:grid;place-items:center;
+  height:100vh;text-align:center;font-family:-apple-system,'Malgun Gothic',sans-serif}
+.w{max-width:380px;padding:24px}
+h1{font-size:19px;margin:0 0 10px}
+p{color:#5A6273;font-size:14px;line-height:1.7;margin:0}
+</style>
+</head>
+<body>
+<div class="w" id="m"><h1>맛있는교회 찬양 콘티</h1><p>앱을 불러오는 중입니다…</p></div>
+<script>
+var SRC = 'https://vsxukdgfxcacjykopwuu.supabase.co/storage/v1/object/public/app/index.html';
+fetch(SRC + '?t=' + Date.now(), { cache: 'no-store' })
+  .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+  .then(function (html) { document.open(); document.write(html); document.close(); })
+  .catch(function (e) {
+    document.getElementById('m').innerHTML =
+      '<h1>앱을 불러오지 못했습니다</h1><p>잠시 후 새로고침해 주세요.<br>계속 안 되면 담임목사님께 알려 주세요.<br><br>' + e + '</p>';
+  });
+</script>
+</body>
+</html>
