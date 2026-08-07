@@ -222,7 +222,7 @@
         opts.push({ t: '세이브 코드 불러오기', d: '다른 기기에서 가져오기' });
         self.choose(opts, function (i, o) {
           if (o.t === '이어서 한다') { Game.load(); self.afterLoad(); }
-          else if (o.t === '새로 시작한다') self.askName();
+          else if (o.t === '새로 시작한다') self.dreamStart();
           else self.importDialog();
         });
       }, '★ ELDRIA ★');
@@ -239,6 +239,89 @@
     afterLoad: function () {
       this.updateHud();
       this.toTown(['다시 돌아왔다. 마을은 그대로다.']);
+    },
+
+    /* ============ 꿈 오프닝 ============
+       짧은 설정 → 바로 전투(엄청 센 상태) → 꿈에서 깸 → 이름 입력
+       조작법도 여기서 자연스럽게 배웁니다. */
+    dreamStart: function () {
+      var self = this;
+      Game.newGame('???');
+      var p = Game.p;
+      p.lv = 99;
+      p.base = { hp: 9999, mp: 999, atk: 1200, def: 600, spd: 300, luk: 200 };
+      p.job = 'dragonspeaker';
+      p.skills = ['dragonword', 'starfall_art', 'meteor'];
+      p.equip = { weapon: 'dragon_fang', armor: 'starcloak', acc: 'seal_shard' };
+      Game.recalc(); p.hp = p.maxHp; p.mp = p.maxMp;
+
+      Game.startBattle('neros_dream');
+      Game.battle.e.maxHp = 100000;
+      Game.battle.e.hp = 100000;
+      this.mode = 'battle';
+      this.scene.bgTheme = 'ruin';
+      this.scene.bgSeed = 99;
+      this._dreamTurn = 0;
+
+      this.updateHud();
+      this.say([
+        '하늘이 통째로 갈라져 있었다.\n그 아래, 산 하나만 한 그림자가 고개를 숙여 이쪽을 내려다봤다.',
+        '「……드디어 왔구나.」\n\n손이 떨린다. 그런데 무섭지는 않았다. 검이 손에 착 붙어 있다.'
+      ], function () { self.dreamTurn(); }, '???');
+    },
+
+    dreamTurn: function () {
+      var self = this;
+      var b = Game.battle;
+      this._dreamTurn++;
+
+      if (this._dreamTurn > 2) { this.dreamWake(); return; }
+
+      this.el.title.textContent = '마왕 네로스';
+      this.el.title.style.display = 'block';
+      this.el.msg.innerHTML = fmt('어떻게 할까?');
+      this.el.cont.style.display = 'none';
+      this._pages = null;
+
+      this.choose([
+        { t: '용언 · 파(破)', d: '용의 언어로 한 마디. 세계가 그 말을 듣는다.' },
+        { t: '별의 낙하', d: '하늘의 상처가 열리고, 별 하나가 떨어진다.' },
+        { t: '유성 강타', d: '하늘에서 불덩이를 떨어뜨린다.' }
+      ], function (i, o) {
+        var dmg = 30000 + Math.floor(Math.random() * 12000);
+        b.e.hp = Math.max(1, b.e.hp - dmg);
+        var lines = [
+          '【' + o.t + '】!\n빛이 하늘을 반으로 갈랐다.\n마왕 네로스에게 ' + dmg.toLocaleString() + '의 피해!',
+          self._dreamTurn === 1
+            ? '「……제법이다.」\n네로스가 팔을 들어 올렸다. 하늘이 어두워졌다.'
+            : '「그래. 그 눈이다.」\n네로스가 웃었다. 그리고 —'
+        ];
+        self.updateHud();
+        self.say(lines, function () { self.dreamTurn(); });
+      });
+    },
+
+    dreamWake: function () {
+      var self = this;
+      this.mode = 'town';
+      this.scene.bgTheme = 'town';
+      this.el.hud.innerHTML = '';
+      this.say([
+        '눈부신 빛 ―',
+        '"…야! 언제까지 잘 거야!"\n\n어머니 목소리에 눈을 떴다. 침대였다. 밀밭 냄새가 났다.',
+        '손을 들어 봤다. 용의 이빨로 만든 검도, 별빛 망토도 없다.\n그냥 열다섯 살짜리 손이었다.\n\n…꿈이었다.',
+        '창밖 하늘에는 오늘도 붉은 균열이 떠 있다.\n저기까지 얼마나 걸릴까. 아니, 갈 수는 있을까.\n\n일단 오늘은, 마당의 슬라임부터다.'
+      ], function () {
+        self.el.overlay.style.display = 'flex';
+        var input = document.getElementById('nameInput');
+        input.value = ''; input.focus();
+        document.getElementById('nameOk').onclick = function () {
+          var v = (input.value || '').trim().slice(0, 8) || '용사';
+          self.el.overlay.style.display = 'none';
+          self.startNewGame(v);
+        };
+        input.onkeydown = function (e) { if (e.key === 'Enter') document.getElementById('nameOk').click(); };
+      }, '꿈에서 깨어났다');
     },
 
     askName: function () {
@@ -283,8 +366,7 @@
         Game.addItem('father_letter', 1);
         Game.save();
         self.say([
-          '아버지의 편지를 가방 깊숙이 넣었다.',
-          '문을 열자 아침 햇살이 쏟아졌다. 검은 나무 막대기 하나뿐이다.',
+          '편지를 가방 깊숙이 넣었다.\n손에 든 건 나무 막대기 하나뿐이다.',
           '그래도, 오늘부터 시작이다.'
         ], function () { self.toTown(); });
       }, G.STORY.letter.title);
@@ -298,20 +380,92 @@
       this.updateHud();
       Game.save();
       var self = this;
-      var go = function () { self.townMenu(); };
-      if (intro) this.say(intro, go, '벨라온 마을');
-      else go();
+
+      // 서버에 새 선물이 왔는지 확인 (꺼져 있거나 실패하면 그냥 넘어감)
+      G.Sync.fetchMail().then(function (rows) {
+        self._mail = rows || [];
+        var go = function () { self.townMenu(); };
+        if (self._mail.length) {
+          self.say((intro || []).concat([
+            '우편함에 편지가 ' + self._mail.length + '통 꽂혀 있다.',
+            '누가 보냈는지는 적혀 있지 않았다.'
+          ]), go, '벨라온 마을');
+        } else if (intro) self.say(intro, go, '벨라온 마을');
+        else go();
+      });
+    },
+
+    /* ---------- 우편함 ---------- */
+    mailbox: function () {
+      var self = this;
+      var rows = this._mail || [];
+      var opts = [];
+      for (var i = 0; i < rows.length; i++) {
+        var g = rows[i].payload || {};
+        opts.push({ t: '✉ ' + (g.from || '운영자') + '에게서 온 편지', d: g.title || '열어 본다' });
+      }
+      opts.push({ t: '선물 코드 입력', d: '받은 코드를 붙여넣습니다' });
+      opts.push({ t: '내 진행 코드 보기', d: '아빠에게 보낼 코드' });
+      opts.push({ t: '← 돌아간다', d: '' });
+
+      this.say([rows.length ? '편지가 와 있다.' : '오늘은 온 편지가 없다.'], function () {
+        self.choose(opts, function (i, o) {
+          if (i < rows.length) { self.openMail(rows[i]); return; }
+          if (o.t === '선물 코드 입력') self.enterGiftCode();
+          else if (o.t === '내 진행 코드 보기') {
+            window.prompt('이 코드를 복사해서 아빠에게 보내세요:', G.Sync.progressCode(Game.p));
+            self.mailbox();
+          } else self.townMenu();
+        });
+      }, '우편함');
+    },
+
+    openMail: function (row) {
+      var self = this;
+      var res = Game.redeemGift(row.payload || {});
+      G.Sync.markClaimed(row.id);
+      this._mail = (this._mail || []).filter(function (r) { return r.id !== row.id; });
+      this.afterGift(res, function () { self.mailbox(); });
+    },
+
+    enterGiftCode: function () {
+      var self = this;
+      var code = window.prompt('선물 코드를 붙여넣으세요:');
+      if (!code) { this.mailbox(); return; }
+      var g = G.Sync.readGiftCode(code);
+      if (!g) { this.say(['코드를 읽을 수 없습니다.'], function () { self.mailbox(); }); return; }
+      var res = Game.redeemGift(g);
+      this.afterGift(res, function () { self.mailbox(); });
+    },
+
+    afterGift: function (res, done) {
+      var self = this;
+      if (!res.ok) { this.say([res.why], done); return; }
+      var fx = Game.flushExp();
+      var lines = res.lines.slice();
+      for (var i = 0; i < fx.ups.length; i++) {
+        var u = fx.ups[i];
+        if (typeof u === 'number') lines.push('◆ 레벨 업! → Lv.' + u);
+        else if (u.skill) lines.push('◆ 새 스킬 【' + G.SKILLS[u.skill].name + '】 습득!');
+      }
+      this.updateHud(); Game.save();
+      var pages = [];
+      if (res.msg) pages.push('「' + res.msg + '」\n\n              ― ' + res.from);
+      pages.push('━━━ 받은 것 ━━━\n' + lines.join('\n'));
+      this.say(pages, done, '✉ ' + res.from + '의 선물');
     },
 
     townMenu: function () {
       var self = this, p = Game.p;
       var canJob = p.lv >= 10 && p.job === 'novice';
       this.say(['마을 광장이다. 무엇을 할까?'], function () {
+        var mailN = self._mail ? self._mail.length : 0;
         var opts = [
           { t: '모험을 떠난다', d: '사냥터로' },
           { t: '상점', d: '사고 팔기' },
           { t: '여관에서 쉰다', d: Game.innCost() + ' G · HP/MP 전부 회복' },
           { t: '의뢰 게시판', d: '촌장님과 상인의 부탁' },
+          { t: '우편함' + (mailN ? ' ✉ ' + mailN : ''), d: mailN ? '새 편지가 와 있다!' : '온 편지가 없다' },
           { t: '가방 · 장비', d: '' },
           { t: '내 정보', d: '' },
           { t: '저장 / 설정', d: '' }
@@ -324,6 +478,9 @@
             case '상점': self.shopMenu(); break;
             case '여관에서 쉰다': self.inn(); break;
             case '의뢰 게시판': self.questMenu(); break;
+            default:
+              if (o.t.indexOf('우편함') === 0) { self.mailbox(); break; }
+              self.townMenu(); break;
             case '가방 · 장비': self.bagMenu(function () { self.townMenu(); }); break;
             case '내 정보': self.statusScreen(function () { self.townMenu(); }); break;
             case '저장 / 설정': self.settingsMenu(); break;
@@ -377,12 +534,13 @@
         var r = G.REGIONS[i];
         // 우리 마을은 목록에서 뺀다. 다만 "아직 못 가는 도시"는 목표로 보여 준다.
         if (r.town && !r.locked) continue;
-        var open = p.lv >= r.unlockLv && !r.locked;
-        opts.push({
-          t: r.name + (open ? '' : ' 🔒'),
-          d: open ? r.desc : (r.lockMsg || ('Lv.' + r.unlockLv + ' 필요')),
-          dim: !open
-        });
+        var open = Game.isRegionOpen(r);
+        var why;
+        if (open) why = r.desc;
+        else if (!G.inCurrentChapter(r.id) && !(p.opened && p.opened[r.id]))
+          why = '아직 이야기가 준비되지 않았습니다. (' + G.CHAPTER_NAME + ' 진행 중)';
+        else why = r.lockMsg || ('Lv.' + r.unlockLv + ' 이상 필요');
+        opts.push({ t: r.name + (open ? '' : ' 🔒'), d: why, dim: !open });
         map.push(r);
       }
       opts.push({ t: '마을로 돌아간다', d: '' });
@@ -652,14 +810,37 @@
       }
       if (ups.length) pages.push(ups.join('\n'));
 
+      // 함께 자라는 검
+      if (res.bondUp) {
+        for (var g = 0; g < res.bondUp.length; g++) {
+          var st = res.bondUp[g];
+          pages.push((st.awaken || []).join('\n') +
+            '\n\n━━━━━━━━━━━━━━━\n  검이 자랐다 →  ' + st.name +
+            '\n  공격 +' + st.atk + '\n━━━━━━━━━━━━━━━');
+        }
+      }
+
       for (var m = 0; m < res.opened.length; m++) {
         pages.push('◆◆ 새로운 지역이 열렸습니다 ◆◆\n\n「' + res.opened[m].name + '」\n' + res.opened[m].desc);
       }
       var qd = this.checkQuestReady();
       if (qd.length) pages.push('※ 완료할 수 있는 의뢰가 있다.\n' + qd.join(', '));
 
+      // 이번 장의 목표를 잡았다면 완결 연출
+      var chapterDone = false;
+      if (e.id === G.CHAPTER_GOAL && !Game.p.flags['chapter' + G.CHAPTER_NO]) {
+        Game.p.flags['chapter' + G.CHAPTER_NO] = true;
+        chapterDone = true;
+      }
+
       Game.save();
-      this.say(pages, function () { self.postBattle(true); }, '승리');
+      G.Sync.push(Game.p, true);
+
+      this.say(pages, function () {
+        if (chapterDone) {
+          self.say(G.CHAPTER_END, function () { self.postBattle(true); }, G.CHAPTER_NAME + ' 완결');
+        } else self.postBattle(true);
+      }, '승리');
     },
 
     checkQuestReady: function () {
@@ -807,6 +988,13 @@
       if (!ids.length) opts.push({ t: '가방이 비어 있다', d: '', dim: true });
       opts.push({ t: '← 돌아간다', d: '' });
 
+      // 성장형 검을 갖고 있으면 목록 맨 위에 띄운다
+      if (p.bond && p.bond.owned && p.equip.weapon !== '__bond') {
+        var bi = G.bondAsItem(p.bond);
+        ids.unshift('__bond');
+        opts.unshift({ t: '[' + G.TIERS[bi.tier].name + '] ' + bi.name + '  (내 검)', d: bi.desc + statLine(bi) });
+      }
+
       var eq = p.equip;
       var eqTxt = '무기: ' + nm(eq.weapon) + '   방어구: ' + nm(eq.armor) + '   장신구: ' + nm(eq.acc);
       this.el.title.textContent = '가방';
@@ -815,7 +1003,8 @@
       this._pages = null;
       this.choose(opts, function (i) {
         if (i >= ids.length) { back(); return; }
-        var id = ids[i], it = G.ITEMS[id];
+        var id = ids[i], it = Game.itemOf(id);
+        if (!it) { self.bagMenu(back); return; }
         if (it.type === 'weapon' || it.type === 'armor' || it.type === 'acc') {
           Game.equip(id); self.updateHud(); Game.save();
           self.say([it.name + '을(를) 장착했다.'], function () { self.bagMenu(back); });
@@ -830,7 +1019,7 @@
           self.say(['【' + it.name + '】', it.desc], function () { self.bagMenu(back); });
         }
       });
-      function nm(id) { return id && G.ITEMS[id] ? G.ITEMS[id].name : '없음'; }
+      function nm(id) { var o = Game.itemOf(id); return o ? o.name : '없음'; }
     },
 
     /* ---------- 상태 ---------- */
@@ -845,6 +1034,7 @@
         'EXP ' + p.exp + ' / ' + Game.expNeeded(p.lv) + '\n' +
         '소지금 ' + p.gold.toLocaleString() + ' G',
 
+        bondLine(p) +
         '무기: ' + inm(p.equip.weapon) + '\n' +
         '방어구: ' + inm(p.equip.armor) + '\n' +
         '장신구: ' + inm(p.equip.acc) + '\n\n' +
@@ -859,7 +1049,16 @@
         '아직… 아주 멀다.'
       ];
       this.say(pages, back, '내 정보');
-      function inm(id) { return id && G.ITEMS[id] ? G.ITEMS[id].name + statLine(G.ITEMS[id]) : '없음'; }
+      function inm(id) { var o = Game.itemOf(id); return o ? o.name + statLine(o) : '없음'; }
+      function bondLine(pp) {
+        if (!pp.bond || !pp.bond.owned) return '';
+        var cur = G.bondStage(pp.bond.lv);
+        var nx = Game.bondNext();
+        var t = '⚔ 내 검: ' + cur.name + '  (' + pp.bond.lv + '단계)\n';
+        t += nx ? '   다음 단계까지 ' + Math.max(0, nx.need - pp.bond.exp).toLocaleString() + ' 더 싸우면 됩니다.\n\n'
+                : '   더 이상 자랄 곳이 없다. …지금은.\n\n';
+        return t;
+      }
     },
 
     /* ---------- 설정 ---------- */

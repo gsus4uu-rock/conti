@@ -30,12 +30,23 @@
         unlocked: { village: true, meadow: true },
         titles: [],
         log: [],
+        bond: { owned: false, lv: 1, exp: 0 },   // 성장형 히든 무기
+        redeemed: {},                            // 이미 받은 선물 코드
+        gifts: [],                               // 우편함에 도착한 편지
+        playerId: null,                          // 서버 동기화용 (sync.js가 채움)
         stats: { battles: 0, wins: 0, faints: 0, events: 0, started: Date.now() }
       };
       this.recalc();
       this.p.hp = this.p.maxHp;
       this.p.mp = this.p.maxMp;
       return this.p;
+    },
+
+    /* 아이템 조회. '__bond' 는 성장형 검이라 단계에 따라 능력치가 달라진다. */
+    itemOf: function (id) {
+      if (!id) return null;
+      if (id === '__bond') return this.p.bond.owned ? G.bondAsItem(this.p.bond) : null;
+      return G.ITEMS[id] || null;
     },
 
     /* ================= 파생 스탯 ================= */
@@ -49,7 +60,7 @@
       for (var k = 0; k < slots.length; k++) {
         var id = p.equip[slots[k]];
         if (!id) continue;
-        var it = G.ITEMS[id];
+        var it = this.itemOf(id);
         if (!it) continue;
         for (var st in s) if (it[st]) s[st] += it[st];
         if (it.atkPct) pct.atk += it.atkPct;
@@ -92,16 +103,25 @@
       return ups;
     },
 
+    /* 지금 갈 수 있는 지역인가?
+       조건 1) 레벨   2) 이번 챕터에 포함된 지역   3) 아버지가 선물로 열어준 지역 */
+    isRegionOpen: function (r) {
+      var p = this.p;
+      if (p.unlocked[r.id] && p.opened && p.opened[r.id]) return true;  // 운영자가 직접 개방
+      if (!G.inCurrentChapter(r.id)) return false;
+      return p.lv >= r.unlockLv;
+    },
+
     /* 새로 열린 지역 확인 */
     checkUnlocks: function () {
       var p = this.p, opened = [];
       for (var i = 0; i < G.REGIONS.length; i++) {
         var r = G.REGIONS[i];
-        if (r.locked) continue;
-        if (p.lv >= r.unlockLv && !p.unlocked[r.id]) {
-          p.unlocked[r.id] = true;
-          opened.push(r);
-        }
+        if (r.town) continue;
+        if (p.unlocked[r.id]) continue;
+        if (!this.isRegionOpen(r)) continue;
+        p.unlocked[r.id] = true;
+        opened.push(r);
       }
       return opened;
     },
@@ -125,14 +145,14 @@
     countItem: function (id) { return this.p.inv[id] || 0; },
 
     equip: function (id) {
-      var it = G.ITEMS[id];
+      var it = this.itemOf(id);
       if (!it) return null;
       var slot = it.type === 'weapon' ? 'weapon' : it.type === 'armor' ? 'armor' : it.type === 'acc' ? 'acc' : null;
       if (!slot) return null;
       var old = this.p.equip[slot];
       this.p.equip[slot] = id;
-      this.removeItem(id, 1);
-      if (old) this.addItem(old, 1);
+      if (id !== '__bond') this.removeItem(id, 1);
+      if (old && old !== '__bond') this.addItem(old, 1);
       this.recalc();
       return old;
     },
@@ -174,7 +194,8 @@
         exp: m.exp, gold: m.gold, drops: m.drops || [], boss: !!m.boss,
         flavor: m.flavor, intro: m.intro
       };
-      this.battle = { e: e, turn: 0, buffs: {}, over: false, fled: false };
+      this.battle = { e: e, turn: 0, buffs: {}, over: false, fled: false,
+                      guardUsed: false, avenge: false };
       this.p.stats.battles++;
       return this.battle;
     },
@@ -204,15 +225,27 @@
       return { dmg: Math.max(1, Math.round(dmg)), crit: crit };
     },
 
+    // 반격 태세면 이번 공격만 3배. 쓰고 나면 사라진다.
+    takeAvenge: function () {
+      if (!this.battle.avenge) return 1;
+      this.battle.avenge = false;
+      this.battle.avengeUsed = true;
+      return 3;
+    },
+
     // 플레이어 행동 → 로그 배열 반환
     playerAct: function (action, arg) {
       var b = this.battle, p = this.p, e = b.e, out = [];
       if (b.over) return out;
+      var av = 1;
 
       if (action === 'attack') {
-        var r = this.calcDamage(this.pAtk(), e.def, 1);
+        av = this.takeAvenge();
+        var r = this.calcDamage(this.pAtk(), e.def, av);
         e.hp -= r.dmg;
-        out.push({ t: (r.crit ? '★ 급소에 정확히 들어갔다!  ' : '') + p.name + '의 공격! ' + e.name + '에게 ' + r.dmg + '의 피해.', flashE: true });
+        out.push({
+          t: (av > 1 ? '⚡ 반격!  ' : '') + (r.crit ? '★ 급소에 정확히 들어갔다!  ' : '') +
+             p.name + '의 공격! ' + e.name + '에게 ' + r.dmg + '의 피해.', flashE: true });
 
       } else if (action === 'skill') {
         var sk = G.SKILLS[arg];
@@ -228,14 +261,16 @@
           b.buffs[sk.stat] = { amt: sk.amt, turns: sk.turns };
           out.push({ t: p.name + '은(는) 【' + sk.name + '】! ' + sk.desc });
         } else {
+          av = this.takeAvenge();
           var hits = sk.hits || 1, total = 0, anyCrit = false;
           for (var i = 0; i < hits; i++) {
-            var rr = this.calcDamage(this.pAtk(), e.def, sk.power, sk.critBonus);
+            var rr = this.calcDamage(this.pAtk(), e.def, sk.power * av, sk.critBonus);
             total += rr.dmg; anyCrit = anyCrit || rr.crit;
           }
           e.hp -= total;
           var line = p.name + '의 【' + sk.name + '】! ' + (hits > 1 ? hits + '연격, ' : '') + '총 ' + total + '의 피해!';
           if (anyCrit) line = '★ 치명타!  ' + line;
+          if (av > 1) line = '⚡ 반격!  ' + line;
           out.push({ t: line, flashE: true });
           if (sk.kind === 'drain') {
             var hv = Math.round(total * 0.5);
@@ -287,6 +322,20 @@
       }
       p.hp -= r.dmg;
       out.push({ t: e.name + '의 공격! ' + r.dmg + '의 피해를 입었다.' + (r.crit ? '  아프다!' : ''), flashP: true });
+
+      /* ── 주인공 보정 「불굴」 ──
+         쓰러질 공격을 맞아도 전투당 한 번은 HP 1로 버틴다.
+         그리고 바로 다음 공격이 3배가 된다(반격). 소설 속 주인공이니까. */
+      if (p.hp <= 0 && !b.guardUsed) {
+        b.guardUsed = true;
+        b.avenge = true;
+        p.hp = 1;
+        out.push({ t: '……' });
+        out.push({ t: '쓰러지려는 순간, 가슴 안쪽에서 뭔가가 버텼다.\n【불굴】 HP 1 로 견뎌냈다!' });
+        out.push({ t: '숨을 몰아쉬며 검을 고쳐 잡았다.\n다음 한 방에 전부 싣는다. ―― 반격 태세!' });
+        return out;
+      }
+
       if (p.hp <= 0) { p.hp = 0; b.over = true; }
       return out;
     },
@@ -323,8 +372,78 @@
       }
 
       res.levelUps = this.addExp(res.exp);
+      res.bondUp = this.addBondExp(res.exp);
       res.opened = this.checkUnlocks();
       return res;
+    },
+
+    /* ================= 성장형 검 ================= */
+    // 검도 같이 경험치를 먹는다. 단계가 오르면 각성 문구를 돌려준다.
+    addBondExp: function (n) {
+      var bd = this.p.bond;
+      if (!bd || !bd.owned) return null;
+      bd.exp += n;
+      var ups = [];
+      while (bd.lv < G.BOND_STAGES.length) {
+        var next = G.BOND_STAGES[bd.lv];   // 다음 단계 (0-based 이므로 lv 가 곧 다음 인덱스)
+        if (bd.exp < next.need) break;
+        bd.lv++;
+        ups.push(next);
+      }
+      if (!ups.length) return null;
+      this.recalc();
+      return ups;
+    },
+
+    bondNext: function () {
+      var bd = this.p.bond;
+      if (!bd.owned || bd.lv >= G.BOND_STAGES.length) return null;
+      return G.BOND_STAGES[bd.lv];
+    },
+
+    /* ================= 우편함 (운영자 선물) ================= */
+    /* payload 예:
+       { id:'g1', from:'아빠', msg:'...', gold:1000,
+         items:[['potion',3]], unlock:'forest', stat:{atk:5}, exp:500 } */
+    redeemGift: function (g) {
+      if (!g || !g.id) return { ok: false, why: '내용을 알 수 없는 편지입니다.' };
+      if (this.p.redeemed[g.id]) return { ok: false, why: '이미 받은 선물입니다.' };
+
+      this.p.redeemed[g.id] = true;
+      var lines = [];
+
+      if (g.gold) { this.p.gold += g.gold; lines.push('+' + g.gold.toLocaleString() + ' G'); }
+      if (g.items) {
+        for (var i = 0; i < g.items.length; i++) {
+          var id = g.items[i][0], n = g.items[i][1] || 1;
+          var it = G.ITEMS[id];
+          if (!it) continue;
+          this.addItem(id, n);
+          lines.push('【' + G.TIERS[it.tier].name + '】 ' + it.name + ' ×' + n);
+        }
+      }
+      if (g.exp) { this._pendingExp = (this._pendingExp || 0) + g.exp; lines.push('+' + g.exp.toLocaleString() + ' EXP'); }
+      if (g.stat) {
+        var LB = { hp: '최대HP', mp: '최대MP', atk: '공격', def: '방어', spd: '속도', luk: '행운' };
+        var parts = [];
+        for (var k in g.stat) { this.p.bonus[k] = (this.p.bonus[k] || 0) + g.stat[k]; parts.push(LB[k] + ' +' + g.stat[k]); }
+        lines.push(parts.join(' / '));
+      }
+      if (g.bond) { this.p.bond.owned = true; lines.push('낡은 검 한 자루를 받았다.'); }
+      if (g.unlock) {
+        this.p.unlocked[g.unlock] = true;
+        this.p.opened = this.p.opened || {};
+        this.p.opened[g.unlock] = true;
+        var r = this.region(g.unlock);
+        if (r) lines.push('◆◆ 새로운 지역이 열렸습니다 — 「' + r.name + '」');
+      }
+      if (g.heal) { this.recalc(); this.p.hp = this.p.maxHp; this.p.mp = this.p.maxMp; }
+
+      this.recalc();
+      this.p.gifts = this.p.gifts || [];
+      this.p.gifts.push({ id: g.id, from: g.from || '운영자', msg: g.msg || '', at: Date.now() });
+      this.save();
+      return { ok: true, lines: lines, msg: g.msg || '', from: g.from || '운영자' };
     },
 
     /* ================= 운명 이벤트 ================= */
@@ -383,7 +502,14 @@
       if (!g) return [];
       var p = this.p, lines = [];
 
-      if (g.gold) { p.gold += g.gold; lines.push('+' + g.gold + ' G'); }
+      if (g.gold) {
+        p.gold = Math.max(0, p.gold + g.gold);
+        lines.push((g.gold >= 0 ? '+' : '') + g.gold.toLocaleString() + ' G');
+      }
+      if (g.bond && !p.bond.owned) {
+        p.bond.owned = true;
+        lines.push('【일반】 ' + G.bondStage(1).name + ' 획득!');
+      }
       if (g.goldByLv) { var gg = g.goldByLv * p.lv + Math.floor(Math.random() * 20); p.gold += gg; lines.push('+' + gg + ' G'); }
       if (g.goldHalf) { var h = Math.floor(p.gold / 2); p.gold -= h; lines.push('-' + h + ' G'); }
       if (g.useItem && this.countItem(g.useItem)) {
@@ -539,8 +665,10 @@
     save: function () {
       try {
         localStorage.setItem(SAVE_KEY, JSON.stringify(this.p));
-        return true;
-      } catch (e) { return false; }
+      } catch (e) { /* 저장 공간이 꽉 찼어도 게임은 계속 */ }
+      // 서버 동기화 (설정이 없으면 아무 일도 안 함)
+      try { if (G.Sync) G.Sync.push(this.p); } catch (e) {}
+      return true;
     },
     hasSave: function () {
       try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; }
