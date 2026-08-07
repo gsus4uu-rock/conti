@@ -1,0 +1,8 @@
+# 브라우저 테스트용으로만 설치하는 것들 (게임 실행에는 필요 없음)
+node_modules/
+package.json
+package-lock.json
+
+# OS / 편집기
+.DS_Store
+Thumbs.db
