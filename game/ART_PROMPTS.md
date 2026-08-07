@@ -37,7 +37,15 @@ style of Chained Echoes, Sea of Stars, and Octopath Traveler sprites.
 | 캐릭터·몬스터 | 1:1 정사각형 | 1024 × 1024 |
 | 배경 | 16:9 | 1920 × 1080 |
 
-### 4. 배경은 "빈 자리"를 남겨야 합니다
+### 4. 배경은 위아래가 조금 잘립니다
+
+게임은 **가로 전용**이고, 화면을 빈틈없이 채우기 위해 배경을 확대해서 자릅니다.
+기기 비율에 따라 **위아래가 각각 최대 10%까지 잘릴 수 있습니다.**
+
+→ 하늘의 중요한 것(달, 균열 등)이나 바닥의 중요한 것은 **너무 가장자리에 두지 마세요.**
+   프롬프트에 이미 반영해 두었지만, 결과물을 볼 때 이 점을 확인하시면 됩니다.
+
+### 5. 배경은 "빈 자리"를 남겨야 합니다
 
 배경 위에 캐릭터가 올라갑니다. 그래서 배경 프롬프트에는 아래가 들어가 있습니다.
 
@@ -49,7 +57,7 @@ so that game characters can be placed there. No characters, no creatures.
 
 **이 문장을 지우지 마세요.** 지우면 배경에 있는 나무·바위 위에 몬스터가 겹쳐서 지저분해집니다.
 
-### 5. 이 순서로 만드세요 (효과 큰 순서)
+### 6. 이 순서로 만드세요 (효과 큰 순서)
 
 가장 자주 보이는 것부터 만들면 5장만으로도 확 달라집니다.
 
@@ -284,7 +292,8 @@ Wide 16:9 game battle background, no characters, no creatures, no people.
 Ground/horizon line at about 62% down from the top; the bottom 38% is open
 walkable ground. Leave the center-right area and the lower-left area visually
 calm and uncluttered so that game characters can be placed there.
-Detail belongs at the top and along the far edges, not in the middle-lower area.
+Keep all important elements away from the extreme top and bottom edges — the
+outer 10% of the top and bottom may be cropped. Nothing essential in those bands.
 No text, no UI, no frame, no border, no watermark, no vignette.
 ```
 
@@ -374,6 +383,8 @@ Apocalyptic, sacred, and very old. This is where the world was wounded.
 2. 커밋 & 푸시
 3. 끝 — 게임에서 바로 보입니다
 
+> ⚠️ 게임은 **가로 화면 전용**입니다. 세로로 들면 "돌려 주세요" 안내가 뜹니다.
+>
 > ⚠️ 그림은 **GitHub Pages 주소로 열었을 때** 완전하게 처리됩니다.
 > 파일을 그냥 더블클릭해서 열면(`file://`) 브라우저 보안 때문에 마젠타 제거가 안 됩니다.
 > 아이들은 어차피 Pages 주소로 할 테니 문제없지만, 확인하실 때 참고하세요.

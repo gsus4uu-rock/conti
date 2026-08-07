@@ -14,18 +14,18 @@
   var W = 480, H = 270;
 
   /* ---------- 화면 배치 (여기만 고치면 전체가 따라옵니다) ---------- */
-  /* 세로 270px 예산 배분 (겹치지 않도록 계산해 둔 값)
-       적 이름표   16 ~  70
-       적 스프라이트  ~ 180  (제일 큰 마왕이 176px 이므로 y=4 부터)
-       아군 이름표  186 ~ 260
-       아군 스프라이트 150 ~ 262 (왼쪽이라 이름표와 안 겹침)          */
+  /* ── 안전 영역 ──
+     화면은 cover(꽉 채우기) 방식이라 비율이 안 맞는 만큼 잘려 나갑니다.
+       가장 넓은 폰(21:9) → 위아래로 각각 약 32px 잘림
+       가장 좁은 태블릿(4:3) → 좌우로 각각 약 60px 잘림
+     캐릭터와 중요한 것은 반드시 이 안에만 그립니다. */
+  var SAFE = { top: 34, bottom: 236, left: 60, right: 420 };
+
   var L = {
     horizon: 168,                                // 하늘과 땅의 경계
-    enemy:  { cx: 340, base: 180, pad: 170 },    // 적이 서는 자리 / 발판 폭
-    hero:   { cx: 118, base: 262, pad: 200 },    // 아군이 서는 자리
-    plate:  { e: { x: 14,  y: 16,  w: 226 },     // 이름표
-              p: { x: 242, y: 186, w: 226 } },
-    townRoad: 196
+    enemy:  { cx: 340, base: 188, pad: 170 },    // 적이 서는 자리 / 발판 폭
+    hero:   { cx: 116, base: 214, pad: 200 },    // 아군이 서는 자리 (UI에 덜 가리도록)
+    townRoad: 152
   };
 
   // 고정 시드 난수 (배경 디테일이 매 프레임 흔들리지 않게)
@@ -136,20 +136,6 @@
     P.sprite(name, x, y, scale, opt);
   }
 
-  /* ---------- 이름표 ---------- */
-  function nameplate(x, y, w, lvl, hpRatio, showNums, hp, maxHp) {
-    var h = showNums ? 74 : 54;
-    P.box(x, y, w, h);
-    P.text('LV' + lvl, x + 12, y + 10, '#181820', 2);
-    P.text('HP', x + 12, y + 30, '#e08020', 2);
-    var barX = x + 44, barW = w - 56;
-    P.bar(barX, y + 34, barW, hpRatio);
-    if (showNums) {
-      var s = hp + '/' + maxHp;
-      P.text(s, x + w - 12 - P.textW(s, 2), y + 50, '#181820', 2);
-    }
-  }
-
   var Scene = {
     init: function () { P = G.Pixel; A = G.Assets; },
     tick: function () { t++; },
@@ -173,8 +159,8 @@
       var hb = Math.round(Math.sin(t / 26 + 1) * 2);
       place('hero_back', L.hero.cx, L.hero.base, hb, st.heroFlash ? { tint: '#ffffff' } : null);
 
-      nameplate(L.plate.e.x, L.plate.e.y, L.plate.e.w, e.lv, e.hp / e.maxHp, false);
-      nameplate(L.plate.p.x, L.plate.p.y, L.plate.p.w, st.p.lv, st.p.hp / st.p.maxHp, true, st.p.hp, st.p.maxHp);
+      // 이름표는 HTML 패널(#foe / #hud)이 담당합니다.
+      // 캔버스 폰트로는 한글을 못 쓰기 때문에, 그쪽이 몬스터 이름까지 보여 줄 수 있습니다.
     },
 
     /* ---- 마을 ---- */
@@ -184,7 +170,7 @@
         P.ctx.drawImage(img, 0, 0, W, H);
       } else {
         drawBg('town', 3);
-        var houses = [[24, 62, 120, 100, '#c05040'], [174, 48, 132, 116, '#5070c0'], [336, 66, 120, 96, '#c09040']];
+        var houses = [[24, 30, 120, 92, '#c05040'], [174, 16, 132, 106, '#5070c0'], [336, 34, 120, 88, '#c09040']];
         for (var i = 0; i < houses.length; i++) {
           var h = houses[i];
           P.rect(h[0], h[1] + 28, h[2], h[3] - 28, '#e8d8b8');
@@ -196,24 +182,25 @@
           P.rect(h[0] + 16, h[1] + 46, 24, 24, '#80c8e0');
           P.rect(h[0] + h[2] - 40, h[1] + 46, 24, 24, '#80c8e0');
         }
-        P.rect(0, L.townRoad, W, 46, '#d8c8a0');
-        for (var s = 0; s < 70; s++) P.rect((s * 47) % W, L.townRoad + 4 + (s * 19) % 38, 3, 3, '#b8a880');
+        P.rect(0, L.townRoad, W, 60, '#d8c8a0');
+        for (var s = 0; s < 70; s++) P.rect((s * 47) % W, L.townRoad + 4 + (s * 19) % 52, 3, 3, '#b8a880');
       }
-      place('hero_front', 240, 262);
-      place('elder', 74, 254);
-      place('merchant', 406, 254);
+      // UI 패널에 가리지 않도록 화면 위쪽 띠에 세운다
+      place('hero_front', 240, 196);
+      place('elder', 116, 190);
+      place('merchant', 366, 190);
     },
 
     /* ---- 필드 ---- */
     field: function (st) {
       drawBg(st.bgTheme || 'plains', st.bgSeed || 11);
-      place('hero_front', 240, 260);
+      place('hero_front', 240, 206);
     },
 
     /* ---- 이벤트 컷 ---- */
     event: function (st) {
       drawBg(st.bgTheme || 'night', st.bgSeed || 21);
-      if (st.eventSprite) place(st.eventSprite, 240, 246);
+      if (st.eventSprite) place(st.eventSprite, 240, 200);
 
       var r = srand(31);
       for (var i = 0; i < 26; i++) {
@@ -234,7 +221,7 @@
       if (pulse) {
         for (var k = 0; k < 90; k++) P.rect(240 + Math.round(Math.sin(k / 2) * 60), 16 + k, 2, 2, '#ffc0e0');
       }
-      place('hero_front', 240, 262);
+      place('hero_front', 240, SAFE.bottom);
     }
   };
 

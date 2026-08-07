@@ -21,20 +21,29 @@
       canvas.height = H;
       this.ctx = canvas.getContext('2d');
       this.ctx.imageSmoothingEnabled = false;
+      var self = this;
+      var relayout = function () { self.resize(); };
       this.resize();
-      window.addEventListener('resize', this.resize.bind(this));
+      window.addEventListener('resize', relayout);
+      window.addEventListener('orientationchange', function () {
+        // 회전 직후에는 크기가 아직 안 잡혀 있어서 한 박자 늦게 다시 잰다
+        relayout(); setTimeout(relayout, 120); setTimeout(relayout, 400);
+      });
     },
 
-    /* 화면 폭에 맞춰 채운다.
+    /* 화면을 빈틈없이 채운다 (cover). 비율이 안 맞는 부분은 잘라 낸다.
+       그래서 캐릭터는 위아래 26px 안쪽(SAFE)에만 그린다 — scene.js 참조.
        확대될 때는 픽셀을 그대로 보여 주고(도트 느낌 유지),
        축소될 때는 부드럽게 처리한다(고해상도 그림이 자글거리지 않게). */
     resize: function () {
       var host = this.canvas.parentElement;
       if (!host) return;
-      var avail = host.clientWidth || W;
-      var maxH = window.innerHeight * 0.46;
-      var s = Math.min(avail / W, maxH / H);
-      if (s <= 0) s = 1;
+
+      var boxW = host.clientWidth || window.innerWidth;
+      var boxH = host.clientHeight || window.innerHeight;
+      var s = Math.max(boxW / W, boxH / H);
+      if (!(s > 0)) s = 1;
+
       this.scale = s;
       this.canvas.style.width = Math.round(W * s) + 'px';
       this.canvas.style.height = Math.round(H * s) + 'px';

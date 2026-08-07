@@ -19,7 +19,7 @@
       Game = G.Game; Scene = G.Scene;
       var $ = function (id) { return document.getElementById(id); };
       this.el = {
-        msg: $('msg'), choices: $('choices'), hud: $('hud'),
+        msg: $('msg'), choices: $('choices'), hud: $('hud'), foe: $('foe'),
         title: $('boxTitle'), cont: $('cont'), overlay: $('overlay')
       };
 
@@ -55,8 +55,27 @@
       else Scene.field(this.scene);
     },
 
+    /* ---------- 적 정보 패널 ----------
+       캔버스가 아니라 HTML이라서 몬스터 이름을 한글로 보여 줄 수 있습니다. */
+    updateFoe: function () {
+      var el = this.el.foe;
+      if (this.mode !== 'battle' || !Game.battle) { el.innerHTML = ''; return; }
+      var e = Game.battle.e;
+      var pct = Math.max(0, Math.min(1, e.hp / e.maxHp)) * 100;
+      el.innerHTML =
+        '<div class="frow">' +
+          '<span class="fname">' + esc(e.name) + '</span>' +
+          '<span class="flv">Lv.' + e.lv + '</span>' +
+        '</div>' +
+        '<div class="bwrap"><span class="blab">HP</span>' +
+          '<span class="btrack"><span class="bfill hp" style="width:' + pct + '%"></span></span>' +
+        '</div>';
+      el.className = e.boss ? 'boss' : '';
+    },
+
     /* ---------- HUD ---------- */
     updateHud: function () {
+      this.updateFoe();
       var p = Game.p;
       if (!p) { this.el.hud.innerHTML = ''; return; }
       var need = Game.expNeeded(p.lv);
@@ -171,6 +190,9 @@
                 '</button>';
       }
       this.el.choices.innerHTML = html;
+      // 항목이 적고 문구가 짧으면 2열로 배치해서 장면을 덜 가린다 (전투 메뉴 등)
+      var compact = options.length <= 6 && options.every(function (o) { return o.t.length <= 8; });
+      this.el.choices.className = compact ? 'two' : '';
       var self = this;
       var btns = this.el.choices.querySelectorAll('button');
       for (var k = 0; k < btns.length; k++) {
@@ -682,6 +704,7 @@
       var self = this;
       var b = Game.startBattle(mid);
       this.mode = 'battle';
+      this.updateHud();
       var intro = [];
       if (b.e.intro) intro.push(b.e.intro);
       intro.push(b.e.name + '이(가) 나타났다!');
