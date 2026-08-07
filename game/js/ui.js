@@ -50,7 +50,7 @@
         bgTheme: this.scene.bgTheme, bgSeed: this.scene.bgSeed,
         heroFlash: this.scene.heroFlash
       });
-      else if (m === 'town') Scene.town(this.scene);
+      else if (m === 'town') Scene.town();
       else if (m === 'event') Scene.event(this.scene);
       else Scene.field(this.scene);
     },

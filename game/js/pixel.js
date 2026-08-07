@@ -7,7 +7,7 @@
 (function (G) {
   'use strict';
 
-  var W = 160, H = 144;
+  var W = 480, H = 270;   // 16:9 — 고해상도 도트 그림을 담을 수 있는 크기
 
   var Pixel = {
     W: W,
@@ -25,18 +25,20 @@
       window.addEventListener('resize', this.resize.bind(this));
     },
 
-    // 화면 크기에 맞춰 "정수 배율"로만 확대 → 픽셀이 뭉개지지 않음
+    /* 화면 폭에 맞춰 채운다.
+       확대될 때는 픽셀을 그대로 보여 주고(도트 느낌 유지),
+       축소될 때는 부드럽게 처리한다(고해상도 그림이 자글거리지 않게). */
     resize: function () {
       var host = this.canvas.parentElement;
       if (!host) return;
       var avail = host.clientWidth || W;
-      var s = Math.max(1, Math.floor(avail / W));
-      // 세로도 넘치지 않게
-      var maxH = Math.floor((window.innerHeight * 0.42) / H);
-      if (maxH >= 1) s = Math.min(s, maxH);
+      var maxH = window.innerHeight * 0.46;
+      var s = Math.min(avail / W, maxH / H);
+      if (s <= 0) s = 1;
       this.scale = s;
-      this.canvas.style.width = (W * s) + 'px';
-      this.canvas.style.height = (H * s) + 'px';
+      this.canvas.style.width = Math.round(W * s) + 'px';
+      this.canvas.style.height = Math.round(H * s) + 'px';
+      this.canvas.style.imageRendering = s >= 1 ? 'pixelated' : 'auto';
     },
 
     clear: function (color) {
@@ -148,24 +150,52 @@
 
     /* 5x7 미니 숫자/영문 폰트 — 레벨·수치 표기용
        (한글은 캔버스가 아니라 아래 HTML 대사창에서 처리합니다) */
-    text: function (str, x, y, color) {
+    text: function (str, x, y, color, scale) {
       color = color || '#181820';
+      scale = scale || 1;
       str = String(str).toUpperCase();
       for (var i = 0; i < str.length; i++) {
-        this._glyph(str.charAt(i), x + i * 6, y, color);
+        this._glyph(str.charAt(i), x + i * 6 * scale, y, color, scale);
       }
     },
 
-    _glyph: function (ch, x, y, color) {
+    textW: function (str, scale) { return String(str).length * 6 * (scale || 1) - (scale || 1); },
+
+    _glyph: function (ch, x, y, color, scale) {
       var g = FONT[ch];
       if (!g) return;
+      scale = scale || 1;
       this.ctx.fillStyle = color;
       for (var r = 0; r < g.length; r++) {
         var row = g[r];
         for (var c = 0; c < row.length; c++) {
-          if (row.charAt(c) === '#') this.ctx.fillRect(x + c, y + r, 1, 1);
+          if (row.charAt(c) === '#') {
+            this.ctx.fillRect(x + c * scale, y + r * scale, scale, scale);
+          }
         }
       }
+    },
+
+    /* 그림 파일(있으면)로 그리기 — 내용 기준 (cx, baseY) 에 세운다 */
+    image: function (art, cx, baseY, offsetY, opt) {
+      opt = opt || {};
+      var ctx = this.ctx;
+      var oldA = ctx.globalAlpha;
+      if (opt.alpha != null) ctx.globalAlpha = opt.alpha;
+      var x = Math.round(cx - art.w / 2);
+      var y = Math.round(baseY - art.h + (offsetY || 0));
+      if (opt.tint) {
+        // 피격 번쩍임: 실루엣을 흰색으로
+        ctx.save();
+        ctx.drawImage(art.canvas, x, y);
+        ctx.globalCompositeOperation = 'source-atop';
+        ctx.fillStyle = opt.tint;
+        ctx.fillRect(x, y, art.w, art.h);
+        ctx.restore();
+      } else {
+        ctx.drawImage(art.canvas, x, y);
+      }
+      ctx.globalAlpha = oldA;
     }
   };
 
