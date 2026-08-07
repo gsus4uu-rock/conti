@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#05070c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="엘드리아">
+<title>엘드리아 연대기</title>
+<link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+
+<div id="app">
+  <!-- 무대: 가로 모드에서는 화면을 꽉 채우고 그 위에 UI가 얹힙니다 -->
+  <div id="stage">
+    <div id="screen"><canvas id="cv"></canvas></div>
+
+    <div id="foe"></div>
+    <div id="hud"></div>
+
+    <div id="msgbox">
+      <div id="boxTitle"></div>
+      <div id="msg"></div>
+      <div id="cont">▼</div>
+    </div>
+
+    <div id="choices"></div>
+  </div>
+
+</div>
+
+<!-- 세로로 들었을 때 -->
+<div id="rotate">
+  <div class="ico">📱</div>
+  <h2>화면을 가로로 돌려 주세요</h2>
+  <p>엘드리아는 가로 화면 전용입니다.<br>
+     폰을 옆으로 눕히면 바로 시작됩니다.</p>
+</div>
+
+<!-- 이름 입력 -->
+<div id="overlay">
+  <div class="modal">
+    <h2>이름을 정해 주세요</h2>
+    <p>이 아이가 앞으로 불릴 이름입니다.</p>
+    <input id="nameInput" maxlength="8" placeholder="예: 하준" autocomplete="off">
+    <button id="nameOk">이 이름으로 시작</button>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/pixel.js"></script>
+<script src="js/assets.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/data/items.js"></script>
+<script src="js/data/skills.js"></script>
+<script src="js/data/jobs.js"></script>
+<script src="js/data/growth.js"></script>
+<script src="js/data/world.js"></script>
+<script src="js/data/events.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+<script>
+  RPG.Pixel.init(document.getElementById('cv'));
+  RPG.Scene.init();
+  RPG.UI.init();
+</script>
+</body>
+</html>

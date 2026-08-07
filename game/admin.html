@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>엘드리아 운영자실</title>
+<style>
+:root{--bg:#0e1118;--card:#171b26;--line:#2a3040;--ink:#e8e8f0;--dim:#8a92a8;--gold:#e8b23c;--acc:#6ad0f0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;line-height:1.6}
+.wrap{max-width:980px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:20px;margin:0 0 4px}
+h1 span{color:var(--gold)}
+.sub{color:var(--dim);font-size:13px;margin-bottom:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 12px;color:var(--acc)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+label{font-size:12px;color:var(--dim);display:block;margin-bottom:3px}
+input,select,textarea{background:#0d1017;color:var(--ink);border:1px solid var(--line);
+  border-radius:6px;padding:8px 10px;font:inherit;font-size:13px;width:100%}
+textarea{resize:vertical;min-height:64px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+button{background:var(--gold);color:#1a1c26;border:0;border-radius:6px;padding:9px 16px;
+  font:inherit;font-weight:700;font-size:13px;cursor:pointer}
+button.ghost{background:transparent;color:var(--acc);border:1px solid var(--line)}
+button:active{transform:translateY(1px)}
+.f{flex:1;min-width:150px}
+.players{display:grid;gap:10px}
+.p{background:#0d1017;border:1px solid var(--line);border-radius:8px;padding:12px;cursor:pointer}
+.p:hover{border-color:var(--gold)}
+.p.sel{border-color:var(--gold);background:#1b2030}
+.pname{font-weight:700;font-size:15px}
+.pmeta{color:var(--dim);font-size:12px}
+.bar{height:6px;background:#0a0c12;border-radius:3px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#7cf07c,#2aa02a)}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:4px 10px;font-size:13px}
+.kv b{color:var(--dim);font-weight:400}
+.tag{display:inline-block;background:#252b3c;border-radius:4px;padding:2px 7px;font-size:11px;margin:2px 3px 0 0}
+.ok{color:#5ad06a}.warn{color:#e8b23c}.err{color:#e8405a}
+code{background:#0a0c12;padding:2px 5px;border-radius:4px;font-size:12px;word-break:break-all}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}.kv{grid-template-columns:90px 1fr}}
+.hint{font-size:12px;color:var(--dim);margin-top:6px}
+.itemrow{display:flex;gap:6px;margin-bottom:6px}
+.itemrow select{flex:1}.itemrow input{width:70px;flex:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>⚔ 엘드리아 <span>운영자실</span></h1>
+<div class="sub" id="modeLine">모드 확인 중…</div>
+
+<!-- ── 아이들 목록 ── -->
+<div class="card">
+  <h2>아이들 진행 상황</h2>
+  <div class="row">
+    <button id="refresh">새로고침</button>
+    <button class="ghost" id="pasteBtn">진행 코드 붙여넣기</button>
+  </div>
+  <div class="players" id="players"><div class="pmeta">불러오는 중…</div></div>
+</div>
+
+<!-- ── 상세 ── -->
+<div class="card" id="detailCard" style="display:none">
+  <h2 id="detailName">상세</h2>
+  <div class="grid2">
+    <div class="kv" id="detailKv"></div>
+    <div>
+      <label>가진 아이템</label>
+      <div id="detailItems"></div>
+      <label style="margin-top:10px">얻은 칭호</label>
+      <div id="detailTitles"></div>
+      <label style="margin-top:10px">겪은 이야기</label>
+      <div id="detailEvents"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 선물 보내기 ── -->
+<div class="card">
+  <h2>✉ 선물 보내기</h2>
+
+  <div class="row">
+    <div class="f"><label>받는 사람</label>
+      <select id="giftTo"><option value="*">모두에게</option></select></div>
+    <div class="f"><label>보내는 사람 이름</label>
+      <input id="giftFrom" value="아빠"></div>
+  </div>
+
+  <label>편지 내용 (아이가 읽습니다)</label>
+  <textarea id="giftMsg" placeholder="예) 이번 주 숙제 다 했다며? 잘했다. 이거 쓰고 더 세져라."></textarea>
+
+  <div class="grid2" style="margin-top:10px">
+    <div><label>골드</label><input id="giftGold" type="number" value="0"></div>
+    <div><label>경험치</label><input id="giftExp" type="number" value="0"></div>
+  </div>
+
+  <label style="margin-top:10px">아이템</label>
+  <div id="giftItems"></div>
+  <button class="ghost" id="addItem" style="margin-top:4px">+ 아이템 추가</button>
+
+  <div class="grid2" style="margin-top:12px">
+    <div><label>지역 열어주기</label>
+      <select id="giftUnlock"><option value="">안 함</option></select></div>
+    <div><label>능력치 영구 상승</label>
+      <div class="row" style="margin:0">
+        <select id="giftStatKey" style="flex:1">
+          <option value="">안 함</option><option value="hp">최대HP</option><option value="mp">최대MP</option>
+          <option value="atk">공격</option><option value="def">방어</option>
+          <option value="spd">속도</option><option value="luk">행운</option>
+        </select>
+        <input id="giftStatVal" type="number" value="0" style="width:70px;flex:none">
+      </div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:14px">
+    <label style="margin:0"><input type="checkbox" id="giftBond" style="width:auto"> 성장형 검 「이름 없는 검」 주기</label>
+  </div>
+  <div class="row">
+    <label style="margin:0"><input type="checkbox" id="giftHeal" style="width:auto" checked> HP/MP 전부 회복시켜 주기</label>
+  </div>
+
+  <div class="row" style="margin-top:14px">
+    <button id="send">서버로 보내기</button>
+    <button class="ghost" id="makeCode">선물 코드 만들기 (카톡용)</button>
+  </div>
+  <div id="sendResult" class="hint"></div>
+  <textarea id="codeOut" style="display:none;margin-top:8px" readonly></textarea>
+</div>
+
+<!-- ── 설정 안내 ── -->
+<div class="card">
+  <h2>설정</h2>
+  <div class="hint" id="setupHint"></div>
+</div>
+
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/data/items.js"></script>
+<script src="js/data/skills.js"></script>
+<script src="js/data/jobs.js"></script>
+<script src="js/data/growth.js"></script>
+<script src="js/data/world.js"></script>
+<script src="js/sync.js"></script>
+<script>
+(function () {
+  'use strict';
+  var G = window.RPG;
+  var $ = function (id) { return document.getElementById(id); };
+  var online = G.CONFIG.enabled();
+  var players = [];   // {id, name, summary}
+  var selected = null;
+
+  /* ---------- 모드 표시 ---------- */
+  $('modeLine').innerHTML = online
+    ? '<span class="ok">● 서버 연결됨</span> — 아이들이 플레이하면 자동으로 올라옵니다.'
+    : '<span class="warn">● 로컬 모드</span> — 서버 설정이 없어 "코드 주고받기"로 운영합니다.';
+
+  $('setupHint').innerHTML = online
+    ? 'Supabase 연결됨: <code>' + G.CONFIG.SUPABASE_URL + '</code><br>가족 구분: <code>' + G.CONFIG.FAMILY + '</code>'
+    : '서버 자동 동기화를 켜려면 <code>game/js/config.js</code> 에 Supabase 주소와 anon 키를 넣으세요. ' +
+      '설정 방법은 <code>game/SETUP.md</code> 에 있습니다.<br><br>' +
+      '지금은 이렇게 쓰시면 됩니다:<br>' +
+      '① 아이가 게임에서 <b>우편함 → 내 진행 코드 보기</b> 로 코드를 복사해 보냄<br>' +
+      '② 위 <b>진행 코드 붙여넣기</b> 버튼으로 상태 확인<br>' +
+      '③ <b>선물 코드 만들기</b> 로 코드를 만들어 카톡으로 보냄<br>' +
+      '④ 아이가 <b>우편함 → 선물 코드 입력</b> 에 붙여넣으면 수령';
+
+  /* ---------- 목록 채우기 ---------- */
+  function loadPlayers() {
+    if (!online) {
+      $('players').innerHTML = '<div class="pmeta">로컬 모드입니다. "진행 코드 붙여넣기"로 아이 상태를 확인하세요.</div>';
+      return;
+    }
+    var url = G.CONFIG.SUPABASE_URL.replace(/\/+$/, '') +
+      '/rest/v1/game_saves?family=eq.' + encodeURIComponent(G.CONFIG.FAMILY) +
+      '&select=id,name,summary,updated_at&order=updated_at.desc';
+    fetch(url, { headers: {
+      apikey: G.CONFIG.SUPABASE_ANON_KEY,
+      Authorization: 'Bearer ' + G.CONFIG.SUPABASE_ANON_KEY
+    }})
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function (rows) { players = rows || []; renderPlayers(); })
+      .catch(function (e) {
+        $('players').innerHTML = '<div class="pmeta err">불러오지 못했습니다 (' + e + '). ' +
+          'SETUP.md 의 표 만들기를 먼저 하셨는지 확인해 주세요.</div>';
+      });
+  }
+
+  function renderPlayers() {
+    if (!players.length) {
+      $('players').innerHTML = '<div class="pmeta">아직 아무도 플레이하지 않았습니다.</div>';
+      return;
+    }
+    var sel = $('giftTo');
+    sel.innerHTML = '<option value="*">모두에게</option>';
+    $('players').innerHTML = players.map(function (p, i) {
+      var s = p.summary || {};
+      var hpPct = s.maxHp ? Math.round(s.hp / s.maxHp * 100) : 0;
+      sel.innerHTML += '<option value="' + p.id + '">' + esc(s.name || p.name) + '</option>';
+      return '<div class="p' + (selected === i ? ' sel' : '') + '" data-i="' + i + '">' +
+        '<div class="pname">' + esc(s.name || p.name) +
+          ' <span class="pmeta">Lv.' + (s.lv || 1) + ' ' + esc(s.job || '') + '</span></div>' +
+        '<div class="pmeta">「' + esc(s.title || '') + '」 · ' +
+          (s.gold || 0).toLocaleString() + ' G · 제' + (s.chapter || 1) + '장 · ' +
+          '싸움 ' + (s.battles || 0) + '회 / 쓰러짐 ' + (s.faints || 0) + '회</div>' +
+        '<div class="bar"><i style="width:' + hpPct + '%"></i></div>' +
+        '<div class="pmeta" style="margin-top:4px">마지막 접속: ' + when(p.updated_at) + '</div>' +
+        '</div>';
+    }).join('');
+    Array.prototype.forEach.call(document.querySelectorAll('.p'), function (el) {
+      el.onclick = function () { selected = +el.dataset.i; renderPlayers(); showDetail(players[selected]); };
+    });
+  }
+
+  function showDetail(p) {
+    var s = p.summary || {};
+    $('detailCard').style.display = 'block';
+    $('detailName').textContent = (s.name || p.name) + ' 상세';
+    $('detailKv').innerHTML = [
+      ['레벨', 'Lv.' + s.lv + '  (' + (s.job || '') + ')'],
+      ['칭호', s.title || '-'],
+      ['HP', s.hp + ' / ' + s.maxHp],
+      ['소지금', (s.gold || 0).toLocaleString() + ' G'],
+      ['현재 위치', regionName(s.region)],
+      ['진행 장', '제' + (s.chapter || 1) + '장'],
+      ['전투', (s.battles || 0) + '회 (승 ' + (s.wins || 0) + ' / 쓰러짐 ' + (s.faints || 0) + ')'],
+      ['운명 이벤트', (s.events || 0) + '회'],
+      ['무기', (s.equip && s.equip.weapon) || '없음'],
+      ['방어구', (s.equip && s.equip.armor) || '없음'],
+      ['장신구', (s.equip && s.equip.acc) || '없음'],
+      ['성장형 검', s.bond ? s.bond.name + ' (' + s.bond.lv + '단계, 검 경험치 ' + s.bond.exp.toLocaleString() + ')' : '아직 없음']
+    ].map(function (r) { return '<b>' + r[0] + '</b><span>' + esc(String(r[1])) + '</span>'; }).join('');
+
+    $('detailItems').innerHTML = (s.items || []).length
+      ? s.items.map(function (it) {
+          return '<span class="tag" style="color:' + (G.TIERS[it.tier] || {}).color + '">' +
+            esc(it.name) + ' ×' + it.n + '</span>';
+        }).join('')
+      : '<span class="pmeta">없음</span>';
+
+    $('detailTitles').innerHTML = (s.titles || []).length
+      ? s.titles.map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join('')
+      : '<span class="pmeta">아직 없음</span>';
+
+    $('detailEvents').innerHTML = (s.seenEvents || []).length
+      ? '<span class="pmeta">' + s.seenEvents.length + '개의 이야기를 겪었습니다.</span>'
+      : '<span class="pmeta">아직 없음</span>';
+  }
+
+  /* ---------- 선물 만들기 ---------- */
+  var ITEM_IDS = Object.keys(G.ITEMS).sort(function (a, b) {
+    return G.ITEMS[a].name.localeCompare(G.ITEMS[b].name, 'ko');
+  });
+
+  function itemRow() {
+    var d = document.createElement('div');
+    d.className = 'itemrow';
+    d.innerHTML = '<select>' + ITEM_IDS.map(function (id) {
+      var it = G.ITEMS[id];
+      return '<option value="' + id + '">[' + G.TIERS[it.tier].name + '] ' + it.name + '</option>';
+    }).join('') + '</select><input type="number" value="1" min="1">' +
+      '<button class="ghost" style="flex:none">✕</button>';
+    d.querySelector('button').onclick = function () { d.remove(); };
+    return d;
+  }
+  $('addItem').onclick = function () { $('giftItems').appendChild(itemRow()); };
+
+  G.REGIONS.forEach(function (r) {
+    if (r.town && r.id === 'village') return;
+    $('giftUnlock').innerHTML += '<option value="' + r.id + '">' + r.name + '</option>';
+  });
+
+  function buildGift() {
+    var items = [];
+    Array.prototype.forEach.call($('giftItems').children, function (row) {
+      var id = row.querySelector('select').value;
+      var n = Math.max(1, +row.querySelector('input').value || 1);
+      items.push([id, n]);
+    });
+    var g = {
+      id: 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      from: $('giftFrom').value.trim() || '아빠',
+      msg: $('giftMsg').value.trim(),
+      gold: +$('giftGold').value || 0,
+      exp: +$('giftExp').value || 0,
+      items: items,
+      heal: $('giftHeal').checked
+    };
+    if ($('giftUnlock').value) g.unlock = $('giftUnlock').value;
+    if ($('giftBond').checked) g.bond = true;
+    var sk = $('giftStatKey').value, sv = +$('giftStatVal').value || 0;
+    if (sk && sv) { g.stat = {}; g.stat[sk] = sv; }
+    return g;
+  }
+
+  $('makeCode').onclick = function () {
+    var code = G.Sync.encode({ t: 'gift', g: buildGift() });
+    var ta = $('codeOut');
+    ta.style.display = 'block';
+    ta.value = code;
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    $('sendResult').innerHTML = '<span class="ok">코드를 만들었습니다. 복사해서 카톡으로 보내세요.</span>';
+  };
+
+  $('send').onclick = function () {
+    if (!online) {
+      $('sendResult').innerHTML = '<span class="warn">서버 설정이 없습니다. "선물 코드 만들기"를 쓰세요.</span>';
+      return;
+    }
+    var url = G.CONFIG.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/game_mail';
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        apikey: G.CONFIG.SUPABASE_ANON_KEY,
+        Authorization: 'Bearer ' + G.CONFIG.SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal'
+      },
+      body: JSON.stringify({
+        family: G.CONFIG.FAMILY,
+        to_player: $('giftTo').value,
+        payload: buildGift(),
+        claimed: false
+      })
+    }).then(function (r) {
+      $('sendResult').innerHTML = r.ok
+        ? '<span class="ok">보냈습니다! 아이가 마을 우편함에 들르면 받습니다.</span>'
+        : '<span class="err">전송 실패 (' + r.status + ')</span>';
+    }).catch(function (e) {
+      $('sendResult').innerHTML = '<span class="err">전송 실패: ' + e + '</span>';
+    });
+  };
+
+  /* ---------- 진행 코드 붙여넣기 (로컬 모드) ---------- */
+  $('pasteBtn').onclick = function () {
+    var code = prompt('아이가 보낸 진행 코드를 붙여넣으세요:');
+    if (!code) return;
+    var o = G.Sync.decode(code);
+    if (!o || o.t !== 'progress') { alert('코드를 읽을 수 없습니다.'); return; }
+    players = [{ id: o.id, name: o.s.name, summary: o.s, updated_at: o.s.updatedAt }];
+    selected = 0;
+    renderPlayers();
+    showDetail(players[0]);
+  };
+
+  $('refresh').onclick = loadPlayers;
+
+  /* ---------- 도우미 ---------- */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function regionName(id) {
+    for (var i = 0; i < G.REGIONS.length; i++) if (G.REGIONS[i].id === id) return G.REGIONS[i].name;
+    return id || '-';
+  }
+  function when(iso) {
+    if (!iso) return '-';
+    var d = new Date(iso), m = (Date.now() - d.getTime()) / 60000;
+    if (m < 1) return '방금';
+    if (m < 60) return Math.floor(m) + '분 전';
+    if (m < 1440) return Math.floor(m / 60) + '시간 전';
+    return Math.floor(m / 1440) + '일 전';
+  }
+
+  $('giftItems').appendChild(itemRow());
+  loadPlayers();
+})();
+</script>
+</body>
+</html>
