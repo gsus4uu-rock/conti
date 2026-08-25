@@ -7709,8 +7709,17 @@ function homeCuratedSermonSongs(){
     return {title:song ? song.title : title, meta:''};
   });
 }
-function homeRecommendationWasSung(song){
-  return !!song && !song.recommendationVirtual && !!song.id && songAppearances(song.id).length > 0;
+function homeChurchSungSongNames(){
+  const names = new Set();
+  DATA.songs.forEach(song => {
+    if(!songAppearances(song.id).length) return;
+    [song.title, ...(song.aliases || [])].map(norm).filter(Boolean).forEach(name => names.add(name));
+  });
+  return names;
+}
+function homeRecommendationWasSung(song, sungNames = homeChurchSungSongNames()){
+  return !!song && [song.title, ...(song.aliases || [])].map(norm).filter(Boolean)
+    .some(name => sungNames.has(name));
 }
 function homeRecommendationGroup(label, songs, kind){
   return `<details class="home-request-group ${kind}">
@@ -7730,8 +7739,9 @@ function homeServiceBoard(spec, since){
   const forgotten = homeCuratedForgottenSongs();
   const sermonTop = homeCuratedSermonSongs();
   const requests = requestedSongs();
-  const sungRequests = requests.filter(homeRecommendationWasSung);
-  const newRequests = requests.filter(song => !homeRecommendationWasSung(song));
+  const sungNames = homeChurchSungSongNames();
+  const sungRequests = requests.filter(song => homeRecommendationWasSung(song, sungNames));
+  const newRequests = requests.filter(song => !homeRecommendationWasSung(song, sungNames));
   return `<section class="home-service-board" aria-label="${esc(spec.label)} 찬양 흐름">
     <div class="home-snapshot-grid">
       <div class="home-snapshot-block wide-list-block"><h3>최근 1년 많이 부른 곡 <small>횟수 · 최근 부른 날짜</small></h3>
