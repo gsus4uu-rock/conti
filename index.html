@@ -255,13 +255,13 @@ tbody tr:has(+tr.pk-row:last-child)>td{border-bottom:none}
 .home-snapshot-list.home-two-row-list li,.home-snapshot-list.home-two-column-list li{
   width:100%;min-width:0;margin-bottom:6px;break-inside:avoid}
 .home-snapshot-empty{font-size:13px;color:var(--ink-3);padding:8px 0 10px}
-.home-request-strip{padding:13px 20px;display:grid;grid-template-columns:210px minmax(0,1fr);align-items:start;gap:12px}
-.home-request-strip>div:first-child{display:flex;flex-direction:column;gap:1px}
-.home-request-strip>div:first-child b{font-size:13.5px;line-height:1.35}
-.home-request-strip>div:first-child span{font-size:11px;color:var(--ink-3)}
-.home-request-songs{display:flex;gap:7px;flex-wrap:wrap}
-.home-request-songs>span{font-size:12.5px;background:#F7E9D4;color:#684015;border-radius:20px;padding:5px 9px}
-.home-request-songs>span i{font-style:normal;font-weight:700;margin-left:3px}
+.home-request-strip{padding:16px 20px}
+.home-request-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.home-request-head b{font-size:14px;line-height:1.35}
+.home-request-head span{font-size:12px;color:var(--ink-3);white-space:nowrap}
+.home-request-songs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 10px}
+.home-request-songs>span{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;font-size:12.5px;line-height:1.35;background:#F7E9D4;color:#684015;border-radius:8px;padding:7px 9px;overflow-wrap:anywhere}
+.home-request-songs>span i{font-style:normal;font-weight:700;flex:none}
 .home-request-songs>span.empty-note{background:transparent;color:var(--ink-3);padding-left:0}
 .home-edit-tools{border:1px dashed var(--line-2);border-radius:10px;background:var(--surface);padding:10px 14px}
 .home-edit-tools summary{cursor:pointer;font-size:12.5px;color:var(--ink-3);font-weight:600}
@@ -680,7 +680,8 @@ hr.sep{border:none; border-top:1px solid var(--line); margin:16px 0}
   .home-snapshot-list li span{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.4}
   .home-service-board-h{padding:15px 16px 12px}
   .home-snapshot-block{padding:15px 16px}
-  .home-request-strip{grid-template-columns:minmax(0,1fr);padding:14px 16px}
+  .home-request-strip{padding:14px 16px}
+  .home-request-songs{grid-template-columns:minmax(0,1fr)}
   .home-title{align-items:flex-start}
   .home-period{line-height:1.5}
   .safe-review-grid{grid-template-columns:minmax(0,1fr)}
@@ -897,6 +898,7 @@ async function loadAll(){
                      key: i.sung_key || '', note: i.note || '' })),
     })),
   };
+  applyKnownSongAliases();
   reindexAll();
 }
 
@@ -964,6 +966,8 @@ async function saveLeaderQuickSetlist(){
   const rows = inputState.quickRows.map(row=>({title:String(row.title||'').trim(),key:row.key||''}))
     .filter(row=>row.title);
   if(!rows.length){ say('곡명을 한 곡 이상 적어 주세요.'); return; }
+  const placeholder = rows.find(row => obviousPlaceholderTitle(row.title));
+  if(placeholder){ say(`「${placeholder.title}」은 곡 제목으로 저장할 수 없습니다.\n두 글자 이상 입력해 주세요.`); return; }
   if(!inputState.date || !inputState.serviceId || !inputState.leaderId){
     say('날짜와 예배, 인도자를 선택해 주세요.'); return;
   }
@@ -1027,6 +1031,10 @@ function editSetlist(id){
 async function createSong(title, extra = {}){
   const t = (title || '').trim();
   if(!t) return null;
+  if(obviousPlaceholderTitle(t)){
+    say(`「${t}」은 곡 제목으로 저장할 수 없습니다.\n두 글자 이상 입력해 주세요.`);
+    return null;
+  }
   const { data, error } = await sb.from('songs').insert({
     title: t, artist: extra.artist || null, origin_key: extra.key || null,
     category: extra.category || null, aliases: extra.aliases || [],
@@ -1509,11 +1517,12 @@ function songAppearances(songId, f = {}){
 function isWholeChurchLifetimeFilter(f = {}){
   return !f.since && !f.leaderId && !f.serviceId && !(f.serviceIds && f.serviceIds.length);
 }
-function minimumSongCount(actual, f = {}){
-  return actual > 0 ? actual : (isWholeChurchLifetimeFilter(f) ? 1 : 0);
+function minimumSongCount(actual, f = {}, songId = null){
+  const hasRecordedHistory = !!(songId && (appear[songId] || []).length);
+  return actual > 0 ? actual : (isWholeChurchLifetimeFilter(f) && !hasRecordedHistory ? 1 : 0);
 }
 function countSong(songId, f = {}){
-  return minimumSongCount(songAppearances(songId, f).length, f);
+  return minimumSongCount(songAppearances(songId, f).length, f, songId);
 }
 function lastSung(songId, f = {}){
   const a = songAppearances(songId, f);
@@ -1585,6 +1594,13 @@ function norm(t){
   return t.toLowerCase().replace(/[\s()（）\[\]·.,~!?'"’”\-_/]/g, '');
 }
 
+/** 자음 한 글자나 기호만 저장된 값은 곡 제목이 아니라 입력 중 생긴 찌꺼기다. */
+function obviousPlaceholderTitle(t){
+  const s = String(t || '').trim();
+  const meaningful = (s.match(/[가-힣A-Za-z0-9]/g) || []).length;
+  return meaningful < 2;
+}
+
 /** 곡과 악보·콘티 이력은 보존하되, 모든 추천과 집계에서 제외한다. */
 const ALL_STATS_TAG = '추천·통계 제외';
 function isAllStatsSkip(id){
@@ -1592,6 +1608,23 @@ function isAllStatsSkip(id){
   return !!(s && (s.manualTags || []).includes(ALL_STATS_TAG));
 }
 const NORM_INDEX = {};
+/* 사용자가 알려 준 한 곡의 다른 이름. 저장소의 대표 제목이 어느 쪽이든
+   앱 안에서는 대표 제목 하나와 별칭으로 묶어 검색·통계를 같이 잡는다. */
+const KNOWN_SONG_ALIASES = [
+  {title:'모든 것 아시는 주님', aliases:['거친 길 위를 걸어갈 때도', '거친 길 위를 걸어갈때도']},
+];
+function applyKnownSongAliases(){
+  KNOWN_SONG_ALIASES.forEach(rule => {
+    const wanted = [rule.title, ...rule.aliases].map(norm);
+    const song = DATA.songs.find(item => [item.title, ...(item.aliases || [])]
+      .some(value => wanted.includes(norm(value))));
+    if(!song) return;
+    const priorTitle = song.title;
+    song.title = rule.title;
+    song.aliases = [...new Set([...(song.aliases || []), priorTitle, ...rule.aliases])]
+      .filter(value => value && norm(value) !== norm(rule.title));
+  });
+}
 function buildNormIndex(){
   Object.keys(NORM_INDEX).forEach(k => delete NORM_INDEX[k]);
   DATA.songs.forEach(s => {
@@ -1620,15 +1653,15 @@ function matchTitle(raw){
 /** 제목·별칭·아티스트·태그에 더해 「가사」까지 뒤진다.
     가사로 곡을 찾는 건 목사님 요구의 핵심이라 빠뜨리면 안 된다. */
 function searchSongs(q){
-  if(!q.trim()) return DATA.songs;
+  if(!q.trim()) return DATA.songs.filter(s => !obviousPlaceholderTitle(s.title));
   const n = norm(q);
-  return DATA.songs.filter(s =>
+  return DATA.songs.filter(s => !obviousPlaceholderTitle(s.title) && (
     norm(s.title).includes(n) ||
     s.aliases.some(a => norm(a).includes(n)) ||
     norm(s.artist||'').includes(n) ||
     norm(s.lyrics||'').includes(n) ||
     s.autoTags.concat(s.manualTags).some(t => norm(t).includes(n))
-  );
+  ));
 }
 /** 검색어가 가사에서 걸렸는지 알려준다 (검색 결과에 「가사에서 찾음」을 붙이려고) */
 function matchedInLyrics(s, q){
@@ -3974,6 +4007,7 @@ const PASTOR_CHURCH_RECOMMENDATIONS = [
   ['내 잔이 넘치나이다',''], ['사랑한다 말하시네',''],
   ['우리 위에 임하소서 Rest On Us',''], ['주를 바라보며',''],
   ['주와 함께 걸어가네',''], ['주의 자녀로 산다는 것은',''], ['Great Rain',''],
+  ['모든 것 아시는 주님','G'],
 ].map(([title,key]) => ({title,key}));
 let reqQuery = '';
 let reqBusy = false;
@@ -4208,7 +4242,7 @@ function newSongProgress(id, serviceIds = null){
 
 function activeNewSongs(serviceIds = null){
   return DATA.songs
-    .filter(song => isNewSong(song.id))
+    .filter(song => isNewSong(song.id) && !obviousPlaceholderTitle(song.title))
     .map(song => ({ song, progress: newSongProgress(song.id, serviceIds) }))
     .filter(row => !row.progress.complete)
     .sort((a, b) => b.progress.count - a.progress.count
@@ -4221,6 +4255,10 @@ async function toggleNewSong(id, ev){
   const song = S[id];
   if(!song) return;
   if(!isAdmin()){ say('담임목사만 새찬양을 지정할 수 있습니다.'); return; }
+  if(obviousPlaceholderTitle(song.title)){
+    say('한 글자 임시 입력은 새찬양으로 지정할 수 없습니다.');
+    return;
+  }
   const on = !isNewSong(id);
   const tags = (song.manualTags || []).filter(tag => tag !== NEW_SONG_TAG);
   if(on) tags.push(NEW_SONG_TAG);
@@ -7555,7 +7593,7 @@ window.addEventListener('keydown', ev=>{
 
 const HOME_FLOW_DAYS = 365;
 const HOME_CURATED_FORGOTTEN_TITLES = [
-  '나 주님을 모른다 하여도', '내 삶을 깨뜨립니다', '주님의 시선', '하늘의 문을 여소서',
+  '나 주님을 모른다 하여도', '내 삶을 깨뜨립니다', '주님의 시선', '모든 걸음 되시네',
   '나는 주님께 속한 자', '나의 하나님', '송축해 내 영혼', '원하고 바라고 기도합니다',
   '주님의 선하심', '예수 사랑합니다', '밤이나 낮이나', '내 영혼은 안전합니다',
   '기쁨의 날 주시네', '노래 할 수 없는 곳이라 해도', '우리의 기도', '호흡있는 모든 만물',
@@ -7670,7 +7708,7 @@ function homeServiceBoard(spec, since){
         ${homeSimpleList(sermonTop, '지정된 설교후 찬양이 없습니다', 'home-two-row-list')}</div>
     </div>
     <div class="home-request-strip">
-      <div><b>목사님 우리교회 추천 찬양</b><span>${requests.length}곡</span></div>
+      <div class="home-request-head"><b>목사님 우리교회 추천 찬양</b><span>${requests.length}곡</span></div>
       <div class="home-request-songs">${requests.length ? requests.map(song =>
         `<span>${esc(song.title)}${song.key ? ` <i>${esc(song.key)}</i>` : ''}</span>`).join('')
         : '<span class="empty-note">아직 추천곡이 없습니다</span>'}</div>
