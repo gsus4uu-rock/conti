@@ -246,8 +246,6 @@ tbody tr:has(+tr.pk-row:last-child)>td{border-bottom:none}
 .home-block-fresh h3{background:#FFF0D7;border-left-color:#D9912B;color:#6B3D09}
 .home-block-forgotten h3{background:#F1EDF8;border-left-color:#7460A4;color:#473773}
 .home-block-sermon h3{background:#E8F4F1;border-left-color:#2E8074;color:#185B53}
-.home-block-sermon{position:relative}
-.home-block-sermon h3{padding-right:58px}
 .home-snapshot-list{list-style:none;display:flex;flex-direction:column;gap:6px;counter-reset:home-flow}
 .home-snapshot-list li{counter-increment:home-flow;display:grid;grid-template-columns:20px minmax(0,1fr) auto;
   align-items:center;gap:6px;font-size:13.5px;min-height:22px}
@@ -262,26 +260,6 @@ tbody tr:has(+tr.pk-row:last-child)>td{border-bottom:none}
 .home-snapshot-list.home-two-row-list li,.home-snapshot-list.home-two-column-list li{
   width:100%;min-width:0;margin-bottom:6px;break-inside:avoid}
 .home-snapshot-empty{font-size:13px;color:var(--ink-3);padding:8px 0 10px}
-.home-sermon-more{margin-top:10px}
-.home-sermon-more summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;
-  width:100%;min-height:46px;padding:11px 15px;border-radius:10px;background:var(--navy);color:#fff;
-  font-size:13px;font-weight:800;box-shadow:0 5px 14px rgba(24,48,88,.2);transition:filter .12s,transform .12s}
-.home-sermon-more summary::-webkit-details-marker{display:none}
-.home-sermon-more summary::before{content:'▼';font-size:10px;color:#F8D59A}
-.home-sermon-more summary:hover{filter:brightness(1.1);transform:translateY(-1px)}
-.home-sermon-more summary b{font-size:11.5px;color:#F8D59A;font-weight:700}
-.home-sermon-more .close-label{display:none}
-.home-sermon-more[open] .open-label{display:none}
-.home-sermon-more[open]{margin-top:0}
-.home-sermon-more[open] summary{position:absolute;right:20px;top:22px;width:36px;height:36px;min-height:36px;padding:0;
-  border:1px solid rgba(24,91,83,.28);border-radius:8px;background:rgba(255,255,255,.68);color:#185B53;box-shadow:none;z-index:2}
-.home-sermon-more[open] summary:hover{background:#fff;filter:none;transform:none}
-.home-sermon-more[open] summary::before{content:'▲';color:#185B53;font-size:11px}
-.home-sermon-more[open] .close-label{display:block;position:absolute;width:1px;height:1px;padding:0;margin:-1px;
-  overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.home-sermon-more[open] summary b{display:none}
-.home-sermon-more .home-sermon-hidden{margin-top:12px;counter-reset:home-flow 5}
-.home-sermon-more[open] .home-sermon-hidden{margin-top:0}
 .home-request-strip{padding:16px 20px}
 .home-request-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;
   padding:10px 12px;border-left:5px solid #314B78;border-radius:8px;background:#EAF0FA;color:#183058}
@@ -727,7 +705,6 @@ hr.sep{border:none; border-top:1px solid var(--line); margin:16px 0}
   .home-service-board-h{padding:15px 16px 12px}
   .home-snapshot-block{padding:15px 16px}
   .home-request-strip{padding:14px 16px}
-  .home-sermon-more[open] summary{right:16px;top:20px}
   .home-request-songs{grid-template-columns:minmax(0,1fr)}
   .home-title{align-items:flex-start}
   .home-period{line-height:1.5}
@@ -7743,16 +7720,9 @@ function homeCuratedSermonSongs(){
     return {title:song ? song.title : title, meta:''};
   });
 }
-function homeSermonSongsHtml(rows){
-  const first = rows.slice(0, 5);
-  const rest = rows.slice(5);
-  const firstHtml = homeSimpleList(first, '지정된 설교후 찬양이 없습니다', 'home-two-row-list home-sermon-first');
-  if(!rest.length) return firstHtml;
-  return `${firstHtml}<details class="home-sermon-more">
-    <summary><span class="open-label">후찬양 펼쳐서 보기</span><span class="close-label">후찬양 접기</span><b>나머지 ${rest.length}곡</b></summary>
-    ${homeSimpleList(rest, '', 'home-two-row-list home-sermon-hidden')}
-  </details>`;
-}
+  function homeSermonSongsHtml(rows){
+    return homeSimpleList(rows, '지정된 설교후 찬양이 없습니다', 'home-two-row-list home-sermon-all');
+  }
 function homeChurchSungSongNames(){
   const names = new Set();
   DATA.songs.forEach(song => {
