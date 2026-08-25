@@ -255,22 +255,40 @@ tbody tr:has(+tr.pk-row:last-child)>td{border-bottom:none}
 .home-snapshot-list.home-two-row-list li,.home-snapshot-list.home-two-column-list li{
   width:100%;min-width:0;margin-bottom:6px;break-inside:avoid}
 .home-snapshot-empty{font-size:13px;color:var(--ink-3);padding:8px 0 10px}
+.home-sermon-more{margin-top:10px}
+.home-sermon-more summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;
+  width:100%;min-height:46px;padding:11px 15px;border-radius:10px;background:var(--navy);color:#fff;
+  font-size:13px;font-weight:800;box-shadow:0 5px 14px rgba(24,48,88,.2);transition:filter .12s,transform .12s}
+.home-sermon-more summary::-webkit-details-marker{display:none}
+.home-sermon-more summary::before{content:'▼';font-size:10px;color:#F8D59A}
+.home-sermon-more summary:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.home-sermon-more summary b{font-size:11.5px;color:#F8D59A;font-weight:700}
+.home-sermon-more .close-label{display:none}
+.home-sermon-more[open] .open-label{display:none}
+.home-sermon-more[open] .close-label{display:inline}
+.home-sermon-more[open] summary::before{content:'▲'}
+.home-sermon-more .home-sermon-hidden{margin-top:12px;counter-reset:home-flow 5}
 .home-request-strip{padding:16px 20px}
 .home-request-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
 .home-request-head b{font-size:14px;line-height:1.35}
 .home-request-head span{font-size:12px;color:var(--ink-3);white-space:nowrap}
 .home-request-groups{display:grid;gap:9px}
-.home-request-group{border:1px solid var(--line);border-radius:10px;background:#FBFAF7;overflow:hidden}
+.home-request-group{border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden;box-shadow:0 3px 10px rgba(24,48,88,.1)}
 .home-request-group summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;
-  min-height:43px;padding:10px 12px;color:var(--ink-2);font-size:13px;font-weight:700}
+  min-height:48px;padding:11px 14px;font-size:13.5px;font-weight:800;transition:filter .12s,transform .12s}
 .home-request-group summary::-webkit-details-marker{display:none}
-.home-request-group summary::before{content:'▶';font-size:9px;color:var(--ink-3);transition:transform .12s}
-.home-request-group[open] summary{border-bottom:1px solid var(--line);background:#fff}
+.home-request-group summary::before{content:'▶';font-size:10px;transition:transform .12s}
+.home-request-group summary:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.home-request-group[open] summary{border-bottom:1px solid rgba(255,255,255,.35)}
 .home-request-group[open] summary::before{transform:rotate(90deg)}
 .home-request-group summary span{flex:1;min-width:0}
-.home-request-group summary b{font-size:11.5px;color:var(--ink-3);font-weight:600;white-space:nowrap}
-.home-request-group.sung summary{box-shadow:inset 3px 0 0 #C98A3C}
-.home-request-group.new summary{box-shadow:inset 3px 0 0 var(--navy-l)}
+.home-request-group summary b{font-size:11.5px;font-weight:800;white-space:nowrap;border-radius:20px;padding:3px 8px}
+.home-request-group.sung summary{background:#D9912B;color:#251708}
+.home-request-group.sung summary::before{color:#251708}
+.home-request-group.sung summary b{background:rgba(255,255,255,.58);color:#5B350B}
+.home-request-group.new summary{background:var(--navy);color:#fff}
+.home-request-group.new summary::before{color:#F8D59A}
+.home-request-group.new summary b{background:rgba(255,255,255,.16);color:#fff}
 .home-request-group .home-request-songs{padding:12px}
 .home-request-songs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 10px}
 .home-request-songs>span{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;font-size:12.5px;line-height:1.35;background:#F7E9D4;color:#684015;border-radius:8px;padding:7px 9px;overflow-wrap:anywhere}
@@ -7709,6 +7727,16 @@ function homeCuratedSermonSongs(){
     return {title:song ? song.title : title, meta:''};
   });
 }
+function homeSermonSongsHtml(rows){
+  const first = rows.slice(0, 5);
+  const rest = rows.slice(5);
+  const firstHtml = homeSimpleList(first, '지정된 설교후 찬양이 없습니다', 'home-two-row-list home-sermon-first');
+  if(!rest.length) return firstHtml;
+  return `${firstHtml}<details class="home-sermon-more">
+    <summary><span class="open-label">후찬양 펼쳐서 보기</span><span class="close-label">후찬양 접기</span><b>나머지 ${rest.length}곡</b></summary>
+    ${homeSimpleList(rest, '', 'home-two-row-list home-sermon-hidden')}
+  </details>`;
+}
 function homeChurchSungSongNames(){
   const names = new Set();
   DATA.songs.forEach(song => {
@@ -7751,7 +7779,7 @@ function homeServiceBoard(spec, since){
       <div class="home-snapshot-block wide-list-block"><h3>많이 불렸지만 잊혀진 찬양</h3>
         ${homeSimpleList(forgotten, '지정된 찬양이 없습니다', 'home-two-row-list')}</div>
       <div class="home-snapshot-block wide-list-block"><h3>설교후 찬양</h3>
-        ${homeSimpleList(sermonTop, '지정된 설교후 찬양이 없습니다', 'home-two-row-list')}</div>
+        ${homeSermonSongsHtml(sermonTop)}</div>
     </div>
     <div class="home-request-strip">
       <div class="home-request-head"><b>목사님 우리교회 추천 찬양</b><span>${requests.length}곡</span></div>
