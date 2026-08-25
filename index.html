@@ -246,6 +246,8 @@ tbody tr:has(+tr.pk-row:last-child)>td{border-bottom:none}
 .home-block-fresh h3{background:#FFF0D7;border-left-color:#D9912B;color:#6B3D09}
 .home-block-forgotten h3{background:#F1EDF8;border-left-color:#7460A4;color:#473773}
 .home-block-sermon h3{background:#E8F4F1;border-left-color:#2E8074;color:#185B53}
+.home-block-sermon{position:relative}
+.home-block-sermon h3{padding-right:58px}
 .home-snapshot-list{list-style:none;display:flex;flex-direction:column;gap:6px;counter-reset:home-flow}
 .home-snapshot-list li{counter-increment:home-flow;display:grid;grid-template-columns:20px minmax(0,1fr) auto;
   align-items:center;gap:6px;font-size:13.5px;min-height:22px}
@@ -270,9 +272,16 @@ tbody tr:has(+tr.pk-row:last-child)>td{border-bottom:none}
 .home-sermon-more summary b{font-size:11.5px;color:#F8D59A;font-weight:700}
 .home-sermon-more .close-label{display:none}
 .home-sermon-more[open] .open-label{display:none}
-.home-sermon-more[open] .close-label{display:inline}
-.home-sermon-more[open] summary::before{content:'▲'}
+.home-sermon-more[open]{margin-top:0}
+.home-sermon-more[open] summary{position:absolute;right:20px;top:22px;width:36px;height:36px;min-height:36px;padding:0;
+  border:1px solid rgba(24,91,83,.28);border-radius:8px;background:rgba(255,255,255,.68);color:#185B53;box-shadow:none;z-index:2}
+.home-sermon-more[open] summary:hover{background:#fff;filter:none;transform:none}
+.home-sermon-more[open] summary::before{content:'▲';color:#185B53;font-size:11px}
+.home-sermon-more[open] .close-label{display:block;position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.home-sermon-more[open] summary b{display:none}
 .home-sermon-more .home-sermon-hidden{margin-top:12px;counter-reset:home-flow 5}
+.home-sermon-more[open] .home-sermon-hidden{margin-top:0}
 .home-request-strip{padding:16px 20px}
 .home-request-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;
   padding:10px 12px;border-left:5px solid #314B78;border-radius:8px;background:#EAF0FA;color:#183058}
@@ -718,6 +727,7 @@ hr.sep{border:none; border-top:1px solid var(--line); margin:16px 0}
   .home-service-board-h{padding:15px 16px 12px}
   .home-snapshot-block{padding:15px 16px}
   .home-request-strip{padding:14px 16px}
+  .home-sermon-more[open] summary{right:16px;top:20px}
   .home-request-songs{grid-template-columns:minmax(0,1fr)}
   .home-title{align-items:flex-start}
   .home-period{line-height:1.5}
