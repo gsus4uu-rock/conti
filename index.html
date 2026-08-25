@@ -4005,7 +4005,7 @@ const PASTOR_CHURCH_RECOMMENDATIONS = [
   ['하나님의 열심','G'], ['하늘 위에 주님 밖에','G'], ['함께 지어져 가네','F'],
   ['호산나 높은 곳에서','E'], ['호흡있는 모든 만물','D'], ['thank you lord','G'],
   ['내 잔이 넘치나이다',''], ['사랑한다 말하시네',''],
-  ['우리 위에 임하소서 Rest On Us',''], ['주를 바라보며',''],
+  ['우리 위에 임하소서',''], ['주를 바라보며',''],
   ['주와 함께 걸어가네',''], ['주의 자녀로 산다는 것은',''], ['Great Rain',''],
   ['모든 것 아시는 주님','G'],
 ].map(([title,key]) => ({title,key}));
@@ -4200,10 +4200,12 @@ const NEW_SONG_HOME_LIMIT = 10;
 const NEW_SONG_LEADER_OVERRIDES = new Map([
   [norm('예수 우리들의 밝은 빛'), '박은우'],
   [norm('거룩 영원히'), '박은우'],
+  [norm('끝 없는 사랑'), '김성락'],
 ]);
 /* 담임목사가 기존 운영 횟수를 직접 확정한 경우. 기준일 이후 콘티부터 추가로 센다. */
 const NEW_SONG_BASELINES = new Map([
   [norm('거룩 영원히'), { count:3, asOf:'2026-06-19' }],
+  [norm('끝 없는 사랑'), { count:3, asOf:'2026-08-25' }],
 ]);
 let newSongQuery = '';
 
@@ -7657,7 +7659,15 @@ function homeServiceSetlists(serviceIds, since){
 function homeServiceNewSongs(serviceIds){
   /* 새찬양은 담임목사가 지정한 전체 목록이다.
      현재 통계 범위의 예배 밖에서 불렀어도 4회 전까지 홈에 남긴다. */
-  return activeNewSongs();
+  const rows = activeNewSongs();
+  if(!rows.some(row => norm(row.song.title) === norm('끝 없는 사랑'))){
+    rows.push({
+      song:{id:'pastor-new-song:endless-love',title:'끝 없는 사랑',key:'F'},
+      progress:{count:3,goal:NEW_SONG_GOAL,complete:false,first:null,firstLeader:'김성락'},
+    });
+  }
+  return rows.sort((a,b) => b.progress.count-a.progress.count
+    || a.song.title.localeCompare(b.song.title,'ko'));
 }
 function homeRecentPopularSongs(serviceIds, since, limit=20){
   return topSongs({since, serviceIds}, DATA.songs.length)
