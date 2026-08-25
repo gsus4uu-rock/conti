@@ -7825,14 +7825,13 @@ function leaderChurchSongFilteredRows(){
 function leaderChurchSongResultsHtml(){
   const rows = leaderChurchSongFilteredRows();
   const searching = !!leaderChurchSongView.query.trim();
-  const showCodes = leaderChurchSongView.mode === 'alpha';
   return `<div class="leader-church-song-result-h" aria-live="polite">
       <span>${searching ? '비슷한 제목 순 · 직접 확인' : '표시 중'}</span><b>${rows.length}곡</b>
     </div>
     ${rows.length ? `<ol class="leader-church-song-list">${rows.map(row => `
       <li><div class="leader-church-song-row"><button type="button" class="leader-church-song-name"
           onclick="leaderChurchSongOpen('${row.song.id}')" aria-label="${esc(row.song.title)} 악보 미리보기">${esc(row.song.title)}</button>
-        <span class="leader-church-song-meta">${showCodes && row.codes.length
+        <span class="leader-church-song-meta">${row.codes.length
           ? `<i aria-label="부른 코드 ${esc(row.codes.join(', '))}">${esc(row.codes.join(' · '))}</i>` : ''}<b>${row.count}회</b></span></div>
         ${peekHtml('pk_leader_church_'+row.song.id)}</li>`).join('')}</ol>`
       : `<div class="leader-church-song-empty">우리 교회에서 부른 기록이 없습니다.</div>`}`;
