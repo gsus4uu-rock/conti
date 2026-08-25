@@ -239,8 +239,13 @@ tbody tr:has(+tr.pk-row:last-child)>td{border-bottom:none}
 .home-snapshot-block{min-width:0;padding:17px 20px;border-bottom:1px solid var(--line)}
 .home-snapshot-block:nth-child(odd){border-right:1px solid var(--line)}
 .home-snapshot-block:last-child:nth-child(odd){grid-column:1/-1;border-right:0}
-.home-snapshot-block h3{font-size:13px;color:var(--ink-2);margin-bottom:9px}
-.home-snapshot-block h3 small{font-size:11px;color:var(--ink-3);font-weight:500;margin-left:5px}
+.home-snapshot-block h3{display:flex;align-items:baseline;flex-wrap:wrap;gap:3px 7px;font-size:15px;font-weight:800;
+  color:var(--ink);margin-bottom:12px;padding:10px 12px;border-left:5px solid var(--navy);border-radius:8px;background:#EDF2F9}
+.home-snapshot-block h3 small{font-size:11.5px;color:inherit;opacity:.7;font-weight:600;margin-left:0}
+.home-block-popular h3{background:#EAF0FA;border-left-color:#314B78;color:#183058}
+.home-block-fresh h3{background:#FFF0D7;border-left-color:#D9912B;color:#6B3D09}
+.home-block-forgotten h3{background:#F1EDF8;border-left-color:#7460A4;color:#473773}
+.home-block-sermon h3{background:#E8F4F1;border-left-color:#2E8074;color:#185B53}
 .home-snapshot-list{list-style:none;display:flex;flex-direction:column;gap:6px;counter-reset:home-flow}
 .home-snapshot-list li{counter-increment:home-flow;display:grid;grid-template-columns:20px minmax(0,1fr) auto;
   align-items:center;gap:6px;font-size:13.5px;min-height:22px}
@@ -269,8 +274,9 @@ tbody tr:has(+tr.pk-row:last-child)>td{border-bottom:none}
 .home-sermon-more[open] summary::before{content:'▲'}
 .home-sermon-more .home-sermon-hidden{margin-top:12px;counter-reset:home-flow 5}
 .home-request-strip{padding:16px 20px}
-.home-request-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
-.home-request-head b{font-size:14px;line-height:1.35}
+.home-request-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;
+  padding:10px 12px;border-left:5px solid #314B78;border-radius:8px;background:#EAF0FA;color:#183058}
+.home-request-head b{font-size:15px;line-height:1.35;font-weight:800}
 .home-request-head span{font-size:12px;color:var(--ink-3);white-space:nowrap}
 .home-request-groups{display:grid;gap:9px}
 .home-request-group{border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden;box-shadow:0 3px 10px rgba(24,48,88,.1)}
@@ -7772,13 +7778,13 @@ function homeServiceBoard(spec, since){
   const newRequests = requests.filter(song => !homeRecommendationWasSung(song, sungNames));
   return `<section class="home-service-board" aria-label="${esc(spec.label)} 찬양 흐름">
     <div class="home-snapshot-grid">
-      <div class="home-snapshot-block wide-list-block"><h3>최근 1년 많이 부른 곡 <small>횟수 · 최근 부른 날짜</small></h3>
+      <div class="home-snapshot-block home-block-popular wide-list-block"><h3>최근 1년 많이 부른 곡 <small>횟수 · 최근 부른 날짜</small></h3>
         ${homeSimpleList(top, '아직 집계할 곡이 없습니다', 'home-two-column-list')}</div>
-      <div class="home-snapshot-block wide-list-block"><h3>새찬양 <small>(10곡까지 표시됩니다)</small></h3>
+      <div class="home-snapshot-block home-block-fresh wide-list-block"><h3>새찬양 <small>(10곡까지 표시됩니다)</small></h3>
         ${homeSimpleList(fresh, '이 예배에서 진행 중인 새찬양이 없습니다', 'home-two-column-list')}</div>
-      <div class="home-snapshot-block wide-list-block"><h3>많이 불렸지만 잊혀진 찬양</h3>
+      <div class="home-snapshot-block home-block-forgotten wide-list-block"><h3>많이 불렸지만 잊혀진 찬양</h3>
         ${homeSimpleList(forgotten, '지정된 찬양이 없습니다', 'home-two-row-list')}</div>
-      <div class="home-snapshot-block wide-list-block"><h3>설교후 찬양</h3>
+      <div class="home-snapshot-block home-block-sermon wide-list-block"><h3>설교후 찬양</h3>
         ${homeSermonSongsHtml(sermonTop)}</div>
     </div>
     <div class="home-request-strip">
