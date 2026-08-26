@@ -7731,6 +7731,17 @@ function homeChurchSungSongNames(){
   });
   return names;
 }
+function homeRecommendationSungNames(categoryRows = []){
+  const names = homeChurchSungSongNames();
+  categoryRows.forEach(row => {
+    const title = typeof row === 'string' ? row : row?.title;
+    if(!title) return;
+    const song = S[NORM_INDEX[norm(title)]];
+    [title, song?.title, ...(song?.aliases || [])].filter(Boolean).map(norm).filter(Boolean)
+      .forEach(name => names.add(name));
+  });
+  return names;
+}
 function homeRecommendationWasSung(song, sungNames = homeChurchSungSongNames()){
   return !!song && [song.title, ...(song.aliases || [])].map(norm).filter(Boolean)
     .some(name => sungNames.has(name));
@@ -7753,7 +7764,7 @@ function homeServiceBoard(spec, since){
   const forgotten = homeCuratedForgottenSongs();
   const sermonTop = homeCuratedSermonSongs();
   const requests = requestedSongs();
-  const sungNames = homeChurchSungSongNames();
+  const sungNames = homeRecommendationSungNames([...top, ...fresh, ...forgotten, ...sermonTop]);
   const sungRequests = requests.filter(song => homeRecommendationWasSung(song, sungNames));
   const newRequests = requests.filter(song => !homeRecommendationWasSung(song, sungNames));
   return `<section class="home-service-board" aria-label="${esc(spec.label)} 찬양 흐름">
