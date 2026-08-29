@@ -7625,7 +7625,8 @@ const HOME_CURATED_FORGOTTEN_TITLES = [
   '기쁨의 날 주시네', '노래 할 수 없는 곳이라 해도', '우리의 기도', '호흡있는 모든 만물',
   '겸손히 주님 앞에 섭니다', '우린 주를 만나고', '다시 일어나', '함께 지어져가네',
 ];
-/* 담임목사가 직접 정한 목록. 콘티 통계로 자동 추가·삭제·순위 변경하지 않는다. */
+/* 2026-08-29부터 설교후찬양 콘티로 새 곡을 등록하면 1번에 넣고 30곡을 유지한다.
+   첫 교체 때는 담임목사 지정에 따라 「나의 모습 나의 소유」를 내보낸다. */
 const HOME_CURATED_SERMON_TITLES = [
   '나의 모습 나의 소유', '나의 하나님', '슬픈 마음 있는 사람', '아무것도 두려워 말라',
   '나의 예배를 받으소서', '예수 우리들의 밝은 빛', '예수 피를 힘입어', '우리의 기도',
@@ -7636,6 +7637,9 @@ const HOME_CURATED_SERMON_TITLES = [
   '예수 우리 왕이여+함께지어져가네', '예수의 이름으로', '온 세상 창조주', '왕 되신 주',
   '우리는 주의 움직이는 교회',
 ];
+const HOME_SERMON_ROLLING_START = '2026-08-29';
+const HOME_SERMON_FIRST_REPLACED_TITLE = '나의 모습 나의 소유';
+const HOME_SERMON_LIMIT = 30;
 const HOME_SERVICE_SPEC = {
   id:'main', label:'주요예배 통합',
   aliasGroups:[
@@ -7673,7 +7677,8 @@ function homeFocusService(){
     DATA.services.find(service => aliases.includes(homeServiceKey(service.name))) || null).filter(Boolean);
   const sermonService = DATA.services.find(service =>
     HOME_SERVICE_SPEC.sermonAliases.includes(homeServiceKey(service.name))) || null;
-  return {...HOME_SERVICE_SPEC, services, serviceIds:services.map(service=>service.id), sermonService};
+  const serviceIds = [...services.map(service=>service.id), ...(sermonService ? [sermonService.id] : [])];
+  return {...HOME_SERVICE_SPEC, services, serviceIds:[...new Set(serviceIds)], sermonService};
 }
 function homeServiceSetlists(serviceIds, since){
   const ids = Array.isArray(serviceIds) ? serviceIds : [serviceIds];
@@ -7715,7 +7720,22 @@ function homeCuratedForgottenSongs(){
   });
 }
 function homeCuratedSermonSongs(){
-  return HOME_CURATED_SERMON_TITLES.map(title => {
+  const sermonService = DATA.services.find(service =>
+    HOME_SERVICE_SPEC.sermonAliases.includes(homeServiceKey(service.name))) || null;
+  const newlyRegistered = sermonService
+    ? homeServiceSetlists(sermonService.id, HOME_SERMON_ROLLING_START)
+      .flatMap(setlist => setlist.items.map(item => S[item.songId]?.title || '').filter(Boolean))
+    : [];
+  const base = newlyRegistered.length
+    ? HOME_CURATED_SERMON_TITLES.filter(title => norm(title) !== norm(HOME_SERMON_FIRST_REPLACED_TITLE))
+    : HOME_CURATED_SERMON_TITLES;
+  const seen = new Set();
+  return [...newlyRegistered, ...base].filter(title => {
+    const key = norm(title);
+    if(!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, HOME_SERMON_LIMIT).map(title => {
     const song = S[NORM_INDEX[norm(title)]];
     return {title:song ? song.title : title, meta:''};
   });
@@ -8005,7 +8025,7 @@ function vHome(){
   <div class="page-h home-title">
     <div>
       <h1>우리 교회 찬양 흐름</h1>
-      <p>${fmtDate(TODAY)} 기준 · 주일 1·2부와 금요기도회를 한눈에 봅니다.</p>
+      <p>${fmtDate(TODAY)} 기준 · 주일 1·2부, 금요기도회와 설교후찬양을 한눈에 봅니다.</p>
     </div>
   </div>
   <div class="stack">
@@ -8134,6 +8154,7 @@ const LEADER_INPUT_SERVICE_SPECS = [
   ['청년부',['청년부','청년부예배']],
   ['금요',['금요','금요예배','금요기도회']],
   ['청소년부',['청소년부','청소년부예배']],
+  ['설교후 찬양',['설교후찬양','설교후']],
 ];
 function leaderInputServices(){
   const used = new Set();
