@@ -188,8 +188,17 @@ tbody tr:has(+tr.pk-row:last-child)>td{border-bottom:none}
   font-variant-numeric:tabular-nums}
 .rank-row:nth-child(1) .rank-no{color:var(--gold-t)}
 .rank-bd{min-width:0}
-.rank-nm{font-size:14px; font-weight:550; white-space:nowrap; overflow:hidden;
-  text-overflow:ellipsis; margin-bottom:4px}
+.rank-nm{font-size:14px; font-weight:550; display:flex; align-items:center; gap:5px;
+  flex-wrap:wrap; min-width:0; margin-bottom:4px}
+.rank-title{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.stats-song-meta{display:inline-flex; align-items:center; gap:4px; flex-wrap:wrap}
+.stats-meta-keys{display:inline-flex; gap:3px; flex-wrap:wrap}
+.stats-song-meta .key{font-size:10px; min-width:23px; padding:1px 5px; line-height:1.45}
+.stats-topic{display:inline-flex; align-items:center; min-height:19px; padding:1px 7px;
+  border-radius:999px; background:#eef3fb; color:#405779; font-size:10.5px; font-weight:650}
+.stats-summary-song{display:flex; align-items:center; gap:5px; flex-wrap:wrap; font-size:13.5px;
+  padding:2px 0; min-width:0}
+.stats-summary-song>.sub:last-child{margin-left:auto; white-space:nowrap}
 .bar{height:6px; background:var(--surface-2); border-radius:3px; overflow:hidden}
 .bar>i{display:block; height:100%; background:var(--navy-l); border-radius:3px}
 .rank-row:nth-child(1) .bar>i,.rank-row:nth-child(2) .bar>i,.rank-row:nth-child(3) .bar>i{background:var(--gold)}
@@ -287,6 +296,7 @@ tbody tr:has(+tr.pk-row:last-child)>td{border-bottom:none}
 .home-request-songs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 10px}
 .home-request-songs>span{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;font-size:12.5px;line-height:1.35;background:#F7E9D4;color:#684015;border-radius:8px;padding:7px 9px;overflow-wrap:anywhere}
 .home-request-songs>span i{font-style:normal;font-weight:700;flex:none}
+.home-request-songs>span i.missing{color:var(--ink-3);font-size:11px;font-weight:500}
 .home-request-songs>span.empty-note{background:transparent;color:var(--ink-3);padding-left:0}
 .home-edit-tools{border:1px dashed var(--line-2);border-radius:10px;background:var(--surface);padding:10px 14px}
 .home-edit-tools summary{cursor:pointer;font-size:12.5px;color:var(--ink-3);font-weight:600}
@@ -924,6 +934,7 @@ async function loadAll(){
     })),
   };
   applyKnownSongAliases();
+  applyCuratedSongTopics();
   reindexAll();
 }
 
@@ -1638,6 +1649,136 @@ const NORM_INDEX = {};
 const KNOWN_SONG_ALIASES = [
   {title:'모든 것 아시는 주님', aliases:['거친 길 위를 걸어갈 때도', '거친 길 위를 걸어갈때도']},
 ];
+/* 인도자가 통계에서 곡의 메시지를 바로 읽도록 가사·곡 설명을 대조해 정리한 핵심 주제다.
+   저장소의 운영 태그(새찬양·순위 제외 등)와 섞지 않고, 대표 제목/별칭에만 붙인다. */
+const CURATED_SONG_TOPICS = new Map(Object.entries({
+  '구주 예수 의지 함이':['믿음','의지','구원'],
+  '기도하는 이 시간':['기도','응답','위로'],
+  '기뻐하며 경배하세':['경배','기쁨','창조'],
+  '꽃들도':['찬양','소망','회복'],
+  '나는 일어섭니다':['믿음','회복','결단'],
+  '나는 주를 섬기는 것에 후회가 없습니다':['헌신','고백','순종'],
+  '나의 가장 낮은 마음':['겸손','기쁨','하나님나라'],
+  '나의 사랑하는 책':['말씀','인도하심','소망'],
+  '나의 하나님':['신뢰','인도하심','사랑'],
+  '난 예수가 좋다오':['예수','구원','전도'],
+  '날 향한 계획':['섭리','소망','인도하심'],
+  '내 몸은 구주의 성전이니':['성령','거룩','헌신'],
+  '내 삶은 주의 것':['주권','헌신','순종'],
+  '내 삶의 이유라':['예수','헌신','사랑'],
+  '내 영혼이 은총입어':['은혜','천국','기쁨'],
+  '내 영혼이 지치고':['위로','회복','성령'],
+  '날 세우네':['위로','회복','성령'],
+  '내 주를 가까이':['임재','갈망','헌신'],
+  '내 진정 사모하는':['예수','사랑','만족'],
+  '내가 늘 의지하는 예수':['믿음','의지','구원'],
+  '내가 매일 기쁘게':['성령','기쁨','동행'],
+  '너를 사랑한다':['사랑','위로','정체성'],
+  '노래 할 수 없는 곳이라 해도':['믿음','찬양','헌신'],
+  '놀라운 은혜':['은혜','사랑','감사'],
+  '다와서 찬양해':['찬양','경배','공동체'],
+  '다윗의 노래':['목자','위로','신뢰'],
+  '더 원합니다':['임재','갈망','성령'],
+  '모든 상황 속에서':['신뢰','예배','감사'],
+  '모든 생명들아 소리쳐':['구원','부활','경배'],
+  '변찮는 주님의 사랑과':['사랑','보혈','확신'],
+  '비 준비하시니':['섭리','창조','신실하심'],
+  '사랑하는 나의 아버지':['하나님아버지','사랑','경배'],
+  '사랑한다 말하시네':['사랑','정체성','회복'],
+  '사랑합니다 주님':['사랑','경배','고백'],
+  '산과 시내와':['갈망','임재','예배'],
+  '성령이 오셨네':['성령','복음','자유'],
+  '소망 없고 빛도 없는':['구원','십자가','소망'],
+  '수많은 무리들 줄지어':['선교','구원','헌신'],
+  '슬픈 마음 있는 사람':['위로','구원','예수의이름'],
+  '슬픈 마음 있는 자':['위로','구원','예수의이름'],
+  '아주 먼 옛날 하늘에서는':['사랑','구원','복음'],
+  '약할 때 강함 되시네':['은혜','능력','믿음'],
+  '예배자입니다':['예배','헌신','정체성'],
+  '예배합니다':['예배','경배','헌신'],
+  '예수 열방의 소망':['소망','선교','구원'],
+  '예수 우리 왕이여':['왕','임재','경배'],
+  '예수 우리 왕이여+함께지어져가네':['왕','교회','임재'],
+  '오직 예수':['예수','구원','능력'],
+  '왕이신 나의 하나님':['왕','경배','찬양'],
+  '우리의 기도':['기도','하나님나라','공동체'],
+  '우리 함께 기도해':['기도','성령','부흥'],
+  '전능하신 나의 주 하나님은':['전능','믿음','기도'],
+  '주 품에':['평안','위로','신뢰'],
+  '주가 보이신 생명의 길':['십자가','순종','헌신'],
+  '주가 일 하시네':['신뢰','섭리','소망'],
+  '주의 음성을 내가 들으니':['부르심','헌신','구원'],
+  '지금까지 지내온 것':['은혜','인도하심','감사'],
+  '하나님의 부르심':['부르심','순종','소명'],
+  '하나님의 부르심에는':['부르심','순종','소명'],
+  '해 뜨는데 부터':['찬양','영광','열방'],
+  '주가 나타내시네':['임재','영광','경배'],
+  '지금은 엘리야 때처럼':['부흥','선포','재림'],
+  '찬양하세':['찬양','기쁨','승리'],
+  '마음의 예배':['예배','진실','헌신'],
+  '하나님의 나팔소리':['재림','소망','승리'],
+  '내 마음을 가득 채운':['성령','기쁨','찬양'],
+  '믿음이 없이는':['믿음','순종','하나님기쁨'],
+  '주 발 앞에 나 엎드려':['경배','회개','헌신'],
+  '주 이름 찬양':['찬양','주권','신뢰'],
+  '나를 택하시고 부르신 예수님':['부르심','구원','헌신'],
+  '하나님이시여':['갈망','예배','사랑'],
+  '목마른 내 영혼':['갈망','성령','만족'],
+  '그는 사랑':['사랑','십자가','구원'],
+  '주 예수 나의 산 소망':['소망','부활','구원'],
+  '하나님의 사랑을':['사랑','복음','선교'],
+  '주님 약속하신 말씀 위에서':['말씀','믿음','승리'],
+  '주의 약속하신 말씀 위에서':['말씀','믿음','승리'],
+  '주의 나라가 임할 때':['하나님나라','성령','부흥'],
+  '괴로울 때 주님의 얼굴 보라':['위로','신뢰','기도'],
+  '주님 곁으로':['회개','갈망','회복'],
+  '행군 나팔 소리에':['승리','결단','재림'],
+  '감사와 찬양 드리며':['감사','찬양','경배'],
+  '새 힘 얻으리':['소망','회복','믿음'],
+  '하나님의 나라':['하나님나라','정의','소망'],
+  '보라 너희는 두려워 말고':['믿음','위로','구원'],
+  '충만':['성령','임재','헌신'],
+  '복의 근원 강림하사':['은혜','회복','헌신'],
+  '선하신 목자':['목자','인도하심','신뢰'],
+  '찬양의 열기':['예배','진실','회개'],
+  '너 예수께 조용히 나가':['기도','위로','구원'],
+  '살아계신 주':['부활','소망','믿음'],
+  '십자가를 참으신':['십자가','구원','순종'],
+  '기대':['교회','공동체','소망'],
+  '오늘 이곳에 계신 성령님':['성령','임재','회복'],
+  '지금 이 곳에 계신 성령님':['성령','임재','회복'],
+  '천국은 마치':['하나님나라','기쁨','헌신'],
+  '실로암':['치유','순종','믿음'],
+  '우리에겐 소원이 하나 있네':['교회','부흥','하나님나라'],
+}).map(([title,tags]) => [norm(title), tags]));
+
+const NON_TOPIC_TAGS = new Set(['새찬양','순위 제외','추천·통계 제외','우리교회 추천찬양',
+  '담임목사 신청곡','추천곡 제외','잊혀진 찬양 제외','검수대장 복구곡','제목 수동 복구']);
+
+function curatedTopicsFor(song){
+  if(!song) return [];
+  const names=[song.title,...(song.aliases||[])].map(norm);
+  for(const name of names){
+    const tags=CURATED_SONG_TOPICS.get(name);
+    if(tags) return [...tags];
+  }
+  return [];
+}
+
+function songTopicTags(song, limit=3){
+  if(!song) return [];
+  const curated=curatedTopicsFor(song);
+  const stored=[...(song.autoTags||[]),...(song.manualTags||[])]
+    .filter(tag=>tag && !NON_TOPIC_TAGS.has(tag));
+  return [...new Set([...curated,...stored])].slice(0,limit);
+}
+
+function applyCuratedSongTopics(){
+  DATA.songs.forEach(song => {
+    const topics=curatedTopicsFor(song);
+    if(topics.length) song.autoTags=[...new Set([...topics,...(song.autoTags||[])])];
+  });
+}
 function applyKnownSongAliases(){
   KNOWN_SONG_ALIASES.forEach(rule => {
     const wanted = [rule.title, ...rule.aliases].map(norm);
@@ -1702,15 +1843,34 @@ const svcPill = id => SV[id]
   ? `<span class="pill ${SVC_CLASS[id]||'s6'}">${esc(SV[id].name)}</span>` : '';
 const svcName = id => SV[id] ? esc(SV[id].name) : '';
 const keyBadge = (k, base) => !k ? '' : `<span class="key${base && k!==base ? ' alt':''}" title="${base&&k!==base?'원키 '+base+'와 다른 키로 불렀습니다':''}">${esc(k)}</span>`;
-function rankList(rows, onclick){
+function statsSongKeys(songId, f={}){
+  const counts = new Map();
+  songAppearances(songId, f).forEach(ap => {
+    String(ap.key || '').split(/\s*[-→>]\s*/).map(x=>x.trim()).filter(Boolean)
+      .forEach(k => counts.set(k, (counts.get(k) || 0) + 1));
+  });
+  return [...counts.keys()].sort((a,b)=>(counts.get(b)-counts.get(a)) || a.localeCompare(b));
+}
+function statsSongMeta(song, f={}){
+  if(!leaderInterface() || !song) return '';
+  const keys = statsSongKeys(song.id, f);
+  const topics = songTopicTags(song, 3);
+  if(!keys.length && !topics.length) return '';
+  return `<span class="stats-song-meta">
+    ${keys.length ? `<span class="stats-meta-keys">${keys.map(k=>keyBadge(k)).join('')}</span>` : ''}
+    ${topics.map(t=>`<span class="stats-topic">${esc(t)}</span>`).join('')}
+  </span>`;
+}
+function rankList(rows, onclick, statsFilter={}){
   if(!rows.length) return `<div class="empty">데이터가 없습니다</div>`;
   const max = rows[0].n;
   return `<div class="rank">` + rows.map((r,i) => `
     <div class="rank-row" onclick="${onclick(r)}">
       <div class="rank-no">${i+1}</div>
       <div class="rank-bd">
-        <div class="rank-nm">${esc(r.song.title)}
-          <span class="sub" style="font-weight:400">${r.song.artist?' · '+esc(r.song.artist):''}</span></div>
+        <div class="rank-nm"><span class="rank-title">${esc(r.song.title)}
+          <span class="sub" style="font-weight:400">${r.song.artist?' · '+esc(r.song.artist):''}</span></span>
+          ${statsSongMeta(r.song, statsFilter)}</div>
         <div class="bar"><i style="width:${Math.max(6, r.n/max*100)}%"></i></div>
       </div>
       <div class="rank-ct">${r.n}회</div>
@@ -1827,6 +1987,28 @@ function say(msg){
   t.className = 'on';
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>t.className='', 4200);
+}
+
+/** 곡 상세에 저장된 가사를 서식 없는 텍스트로 바로 복사한다. */
+async function copySongLyrics(id){
+  const s = S[id];
+  const lyrics = String(s && s.lyrics || '').trim();
+  if(!lyrics){ say('저장된 가사가 없습니다.'); return; }
+  try {
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(lyrics);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = lyrics; ta.setAttribute('readonly','');
+      ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      if(!document.execCommand('copy')) throw new Error('복사 명령을 지원하지 않습니다');
+      ta.remove();
+    }
+    say(`「${s.title}」 가사를 복사했습니다.`);
+  } catch(e){
+    say('자동 복사를 지원하지 않는 브라우저입니다.\n가사 칸을 길게 눌러 복사해 주세요.');
+  }
 }
 
 /* ── 인도자·예배 관리 (담임목사만) ──────────────
@@ -7783,11 +7965,49 @@ function homeRecommendationWasSung(song, sungNames = homeChurchSungSongNames()){
   return !!song && [song.title, ...(song.aliases || [])].map(norm).filter(Boolean)
     .some(name => sungNames.has(name));
 }
+const HOME_RECOMMENDATION_KEY_ORDER = new Map([
+  ['C',0],['C#',1],['Db',1],['D',2],['D#',3],['Eb',3],['E',4],['F',5],
+  ['F#',6],['Gb',6],['G',7],['G#',8],['Ab',8],['A',9],['A#',10],['Bb',10],['B',11],
+]);
+function homeRecommendationCodes(song, kind){
+  if(kind === 'sung') return homeRecommendationObservedCodes(song);
+  const found = new Set();
+  const raw = String(song.key || '').replace(/♭/g,'b').replace(/♯/g,'#');
+  for(const match of raw.matchAll(/[A-G](?:#|b)?m?/g)) found.add(match[0]);
+  return [...found].sort((a,b) => homeRecommendationKeyOrder(a) - homeRecommendationKeyOrder(b)
+    || a.localeCompare(b));
+}
+function homeRecommendationObservedCodes(song){
+  if(!song || song.recommendationVirtual) return [];
+  const names = new Set([song.title, ...(song.aliases || [])].map(norm).filter(Boolean));
+  const found = new Set();
+  DATA.songs.filter(candidate => [candidate.title, ...(candidate.aliases || [])]
+    .map(norm).some(name => names.has(name)))
+    .forEach(candidate => leaderSongObservedKeys(candidate.id).forEach(code => found.add(code)));
+  return [...found].sort((a,b) => homeRecommendationKeyOrder(a) - homeRecommendationKeyOrder(b)
+    || a.localeCompare(b));
+}
+function homeRecommendationKeyOrder(code){
+  const text = String(code || '');
+  const normalized = text.replace(/m$/,'');
+  return HOME_RECOMMENDATION_KEY_ORDER.has(normalized)
+    ? HOME_RECOMMENDATION_KEY_ORDER.get(normalized) * 2 + Number(/m$/.test(text)) : 999;
+}
+function homeRecommendationRows(songs, kind){
+  return songs.map(song => {
+    const codes = homeRecommendationCodes(song, kind);
+    return {song, codes, keyOrder:homeRecommendationKeyOrder(codes[0])};
+  }).sort((a,b) => a.keyOrder-b.keyOrder
+    || String(a.song.title).localeCompare(String(b.song.title), 'ko', {numeric:true}));
+}
 function homeRecommendationGroup(label, songs, kind){
+  const rows = homeRecommendationRows(songs, kind);
   return `<details class="home-request-group ${kind}">
     <summary><span>${esc(label)}</span><b>${songs.length}곡</b></summary>
-    <div class="home-request-songs">${songs.length ? songs.map(song =>
-      `<span>${esc(song.title)}${song.key ? ` <i>${esc(song.key)}</i>` : ''}</span>`).join('')
+    <div class="home-request-songs">${rows.length ? rows.map(({song,codes,keyOrder}) =>
+      `<span data-key-order="${keyOrder}">${esc(song.title)}${codes.length
+        ? ` <i aria-label="${kind === 'sung' ? '실제로 부른 코드' : '추천 코드'} ${esc(codes.join(', '))}">${esc(codes.join(' · '))}</i>`
+        : (kind === 'sung' ? ' <i class="missing">코드 미기록</i>' : '')}</span>`).join('')
       : '<span class="empty-note">해당하는 추천곡이 없습니다</span>'}</div>
   </details>`;
 }
@@ -8516,7 +8736,8 @@ function vLeaders(){
   <div class="grid g3">
     ${DATA.leaders.map(l=>{
       const mine = DATA.setlists.filter(s=>s.leaderId===l.id);
-      const y1 = topSongs({since:agoDate(365), leaderId:l.id}, 10);
+      const yf = {since:agoDate(365), leaderId:l.id};
+      const y1 = topSongs(yf, 10);
       const svcs = {};
       mine.forEach(s=>svcs[s.serviceId]=(svcs[s.serviceId]||0)+1);
       return `<div class="card" style="cursor:pointer" onclick="go('leader/${l.id}')">
@@ -8527,8 +8748,8 @@ function vLeaders(){
             ${Object.entries(svcs).sort((a,b)=>b[1]-a[1]).map(([sv,n])=>
               `${svcPill(sv)}<span class="sub" style="margin-right:5px">${n}</span>`).join('')}</div>
           <div class="sub" style="font-weight:600;margin-bottom:4px">최근 1년 선호곡</div>
-          ${y1.map((r,i)=>`<div style="font-size:13.5px">${i+1}. ${esc(r.song.title)}
-            <span class="sub">${r.n}회</span></div>`).join('') || '<div class="sub">기록 없음</div>'}
+          ${y1.map((r,i)=>`<div class="stats-summary-song"><span>${i+1}. ${esc(r.song.title)}</span>
+            ${statsSongMeta(r.song,yf)}<span class="sub">${r.n}회</span></div>`).join('') || '<div class="sub">기록 없음</div>'}
         </div></div>`;
     }).join('')}
   </div>`;
@@ -8575,7 +8796,7 @@ function vLeader(id){
             ${[[90,'3개월'],[180,'6개월'],[365,'최근 1년'],[9999,'전체']].map(([d,n])=>
               `<button class="${leaderView.days===d?'on':''}" onclick="leaderView.days=${d};render()">${n}</button>`).join('')}
           </div></div>
-        <div class="card-b tight">${rankList(top, r=>`selectLeaderSong('${r.song.id}')`)}${skipNote()}</div>
+        <div class="card-b tight">${rankList(top, r=>`selectLeaderSong('${r.song.id}')`, f)}${skipNote()}</div>
         <div class="card-b" style="border-top:1px solid var(--line);padding:12px 18px">
           <span class="sub">곡을 누르면 아래에 <b>이어 부른 곡</b>이 나옵니다</span></div>
       </div>
@@ -8638,15 +8859,16 @@ function vServices(){
   <div class="grid g3">
     ${DATA.services.map(v=>{
       const n = DATA.setlists.filter(s=>s.serviceId===v.id).length;
-      const t = topSongs({since:agoDate(365), serviceId:v.id}, 10);
+      const tf = {since:agoDate(365), serviceId:v.id};
+      const t = topSongs(tf, 10);
       const fg = forgottenSongs(180, v.id).length;
       return `<div class="card" style="cursor:pointer" onclick="go('service/${v.id}')">
         <div class="card-b">
           <div class="row" style="margin-bottom:8px">${svcPill(v.id)}
             <span class="sub">콘티 ${n}개</span></div>
           <div class="sub" style="font-weight:600;margin-bottom:4px">최근 1년 최다곡</div>
-          ${t.map((r,i)=>`<div style="font-size:13.5px">${i+1}. ${esc(r.song.title)}
-            <span class="sub">${r.n}회</span></div>`).join('')}
+          ${t.map((r,i)=>`<div class="stats-summary-song"><span>${i+1}. ${esc(r.song.title)}</span>
+            ${statsSongMeta(r.song,tf)}<span class="sub">${r.n}회</span></div>`).join('')}
           <div style="margin-top:10px" class="sub">잊혀진 곡 <b class="warn-t">${fg}곡</b></div>
         </div></div>`;
     }).join('')}
@@ -8656,7 +8878,8 @@ function vService(id){
   const v = SV[id];
   if(!v) return `<div class="empty">예배를 찾을 수 없습니다</div>`;
   const list = DATA.setlists.filter(s=>s.serviceId===id).sort((a,b)=>a.date<b.date?1:-1);
-  const top = topSongs({since:agoDate(svcView.days), serviceId:id}, 10);
+  const topFilter = {since:agoDate(svcView.days), serviceId:id};
+  const top = topSongs(topFilter, 10);
   const forg = forgottenSongs(svcView.forgotDays, id);
   const leaders = {}; list.filter(s=>!isStatsExcludedAppearance({leaderId:s.leaderId,date:s.date}))
     .forEach(s=>leaders[s.leaderId]=(leaders[s.leaderId]||0)+1);
@@ -8684,7 +8907,7 @@ function vService(id){
           <div class="seg">${[[90,'3개월'],[180,'6개월'],[365,'최근 1년'],[9999,'전체']].map(([d,n])=>
             `<button class="${svcView.days===d?'on':''}" onclick="svcView.days=${d};render()">${n}</button>`).join('')}</div>
         </div>
-        <div class="card-b tight">${rankList(top, r=>`go('song/${r.song.id}')`)}${skipNote()}</div>
+        <div class="card-b tight">${rankList(top, r=>`go('song/${r.song.id}')`, topFilter)}${skipNote()}</div>
       </div>
 
       <div class="card" id="svcForgot">
@@ -9158,7 +9381,8 @@ function vSong(id){
           </div>
         </div>
         <div class="card">
-          <div class="card-h"><h2>가사</h2></div>
+          <div class="card-h"><h2>가사</h2><div class="spacer"></div>
+            ${s.lyrics ? `<button class="btn sm" onclick="copySongLyrics('${s.id}')">가사 복사</button>` : ''}</div>
           <div class="card-b">
             <textarea class="inp" rows="6" placeholder="가사를 붙여넣으면 가사·주제로 검색할 수 있게 됩니다."
               onchange="updateSong('${s.id}',{lyrics:this.value})">${esc(s.lyrics)}</textarea>
