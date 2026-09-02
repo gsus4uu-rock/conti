@@ -260,9 +260,11 @@ tbody tr:has(+tr.pk-row:last-child)>td{border-bottom:none}
 .home-snapshot-list li{counter-increment:home-flow;display:grid;grid-template-columns:20px minmax(0,1fr) auto;
   align-items:center;gap:6px;font-size:13.5px;min-height:22px}
 .home-snapshot-list li::before{content:counter(home-flow);font-size:11px;color:var(--ink-3);text-align:center}
-.home-snapshot-list li .home-song-title{display:flex;align-items:baseline;gap:6px;min-width:0;overflow:visible}
+.home-snapshot-list li .home-song-title{display:flex;align-items:baseline;flex-wrap:wrap;gap:3px 6px;min-width:0;overflow:visible}
 .home-snapshot-list li .home-song-title em{font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.home-snapshot-list li .home-song-title i{font-style:normal;font-size:11.5px;font-weight:800;color:#365A8C;flex:none}
+.home-snapshot-list li .home-song-title i{font-style:normal;font-size:11.5px;font-weight:800;color:#365A8C;
+  flex:0 1 auto;min-width:0;max-width:100%;white-space:normal;overflow-wrap:break-word}
+.home-snapshot-list li .home-song-title i.missing{color:var(--ink-3);font-size:10.5px;font-weight:500}
 .home-snapshot-list li b{font-size:11.5px;color:var(--ink-3);font-weight:600;font-variant-numeric:tabular-nums}
 .home-snapshot-block.wide-list-block{grid-column:1/-1;border-right:0}
 .home-snapshot-list.home-two-row-list{display:block;columns:2;column-gap:32px;overflow:visible;
@@ -714,8 +716,9 @@ hr.sep{border:none; border-top:1px solid var(--line); margin:16px 0}
   .leader-church-song-groups{flex-wrap:wrap;overflow:visible;padding-bottom:10px}
   .leader-church-song-group{flex:0 0 auto}
   .leader-church-song-list{columns:1;max-height:none;overflow:visible;padding-right:0}
-  .home-snapshot-list li .home-song-title{line-height:1.4}
+  .home-snapshot-list li .home-song-title{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;line-height:1.4}
   .home-snapshot-list li .home-song-title em{white-space:normal;overflow:visible;text-overflow:clip}
+  .home-snapshot-list li .home-song-title i{justify-self:start}
   .home-service-board-h{padding:15px 16px 12px}
   .home-snapshot-block{padding:15px 16px}
   .home-request-strip{padding:14px 16px}
@@ -7929,17 +7932,22 @@ function homeObservedCodes(song, filter = {}){
   return [...found].sort((a,b) => homeRecommendationKeyOrder(a) - homeRecommendationKeyOrder(b)
     || a.localeCompare(b));
 }
+function homeObservedCodeLabel(codes){
+  if(!Array.isArray(codes)) return '';
+  return codes.length
+    ? `<i aria-label="실제로 부른 코드 ${esc(codes.join(', '))}">${esc(codes.join(' · '))}</i>`
+    : '<i class="missing">코드 미기록</i>';
+}
 function homeSimpleList(rows, emptyText, extraClass=''){
   return rows.length ? `<ol class="home-snapshot-list${extraClass ? ` ${extraClass}` : ''}">${rows.map(row => `
-    <li><span class="home-song-title"><em>${esc(row.title)}</em>${row.codes?.length
-      ? `<i aria-label="실제로 부른 코드 ${esc(row.codes.join(', '))}">${esc(row.codes.join(' · '))}</i>` : ''}</span>
+    <li><span class="home-song-title"><em>${esc(row.title)}</em>${homeObservedCodeLabel(row.codes)}</span>
       ${row.meta ? `<b>${esc(row.meta)}</b>` : ''}</li>`).join('')}</ol>`
     : `<div class="home-snapshot-empty">${esc(emptyText)}</div>`;
 }
 function homeCuratedForgottenSongs(){
   return HOME_CURATED_FORGOTTEN_TITLES.map(title => {
     const song = S[NORM_INDEX[norm(title)]];
-    return {title:song ? song.title : title, meta:''};
+    return {title:song ? song.title : title, codes:homeObservedCodes(song), meta:''};
   });
 }
 function homeCuratedSermonSongs(){
@@ -7960,7 +7968,7 @@ function homeCuratedSermonSongs(){
     return true;
   }).slice(0, HOME_SERMON_LIMIT).map(title => {
     const song = S[NORM_INDEX[norm(title)]];
-    return {title:song ? song.title : title, meta:''};
+    return {title:song ? song.title : title, codes:homeObservedCodes(song), meta:''};
   });
 }
   function homeSermonSongsHtml(rows){
@@ -8036,7 +8044,7 @@ function homeServiceBoard(spec, since){
     .map(({song, progress}) => ({title:song.title, codes:homeObservedCodes(song),
       meta:`${progress.count}/${progress.goal}회 · ${progress.firstLeader || '시작 확인 필요'}`}));
   const learned = recentlyLearnedNewSongs().slice(0, 5)
-    .map(({song, progress}) => ({title:song.title,
+    .map(({song, progress}) => ({title:song.title, codes:homeObservedCodes(song),
       meta:`${progress.count}회 · ${fmtShort(progress.completedAt)}`}));
   const forgotten = homeCuratedForgottenSongs();
   const sermonTop = homeCuratedSermonSongs();
