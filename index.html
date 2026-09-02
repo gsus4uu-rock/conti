@@ -1499,6 +1499,21 @@ function elapsedText(days){
 /* ── 곡 등장 이력 색인 (모든 통계의 토대) ───────── */
 // appear[songId] = [{date, serviceId, leaderId, key, order, setlistId, statsKey, next}]
 const appear = {};
+const statsCanonicalSongIds = new Map();
+function buildStatsCanonicalSongIdIndex(){
+  statsCanonicalSongIds.clear();
+  const seen = new Set();
+  DATA.songs.forEach(seed => {
+    if(seen.has(seed.id)) return;
+    const songs = typeof homeSongEquivalence === 'function'
+      ? homeSongEquivalence(seed.title, seed).songs : [seed];
+    const canonicalId = songs.map(song => song.id).sort()[0];
+    songs.forEach(song => {
+      seen.add(song.id);
+      statsCanonicalSongIds.set(song.id, canonicalId);
+    });
+  });
+}
 function buildAppearIndex(){
 Object.keys(appear).forEach(k => delete appear[k]);
 DATA.songs.forEach(s => appear[s.id] = []);
@@ -1518,6 +1533,7 @@ DATA.setlists.forEach(st => {
   });
 });
 Object.values(appear).forEach(a => a.sort((x,y) => x.date < y.date ? 1 : -1));
+buildStatsCanonicalSongIdIndex();
 }
 
 const F = {};   // 필터 통과 검사
@@ -1540,15 +1556,30 @@ function isStatsExcludedAppearance(ap){
 }
 /** 필터를 먼저 적용한 뒤 같은 날·인도자·곡순서가 같은 콘티를 한 번으로 묶는다.
     그래서 1부 통계와 2부 통계는 각각 1회지만, 둘을 합친 통계도 1회다. */
-function statisticalAppearances(rows){
+function statisticalAppearances(rows, canonicalSongIds=null){
   const seen = new Set();
   return (rows || []).filter(ap => {
     if(isStatsExcludedAppearance(ap)) return false;
-    const key = ap.statsKey || ap.setlistId;
+    let key = ap.statsKey || ap.setlistId;
+    if(ap.statsKey && canonicalSongIds?.size){
+      const parts = String(ap.statsKey).split('|');
+      if(parts.length >= 3){
+        const sequence = parts.slice(2).join('|').split('>')
+          .map(songId => canonicalSongIds.get(songId) || songId).join('>');
+        key = [parts[0], parts[1], sequence].join('|');
+      }
+    }
     if(seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+}
+/** 동일곡의 여러 ID를 같은 논리 곡 ID로 바꾼 뒤 통계 중복을 제거한다.
+    현재 동일곡 묶음 밖의 ID는 그대로 두므로 곡순서가 다르면 별도 콘티로 남는다. */
+function statisticalEquivalentAppearances(songs, f={}){
+  const list = (songs || []).filter(Boolean);
+  return statisticalAppearances(list.flatMap(song => (appear[song.id] || [])
+    .filter(ap => pass(ap, f))), statsCanonicalSongIds);
 }
 function songAppearances(songId, f = {}){
   return statisticalAppearances((appear[songId] || []).filter(ap => pass(ap, f)));
@@ -1574,14 +1605,24 @@ function lastSung(songId, f = {}){
     봉헌·축도처럼 매주 같은 자리에 들어가는 곡은 순위에서 뺀다 (f.all 이면 그대로 둔다).
     「추천·통계 제외」 곡은 어떤 집계에서도 항상 뺀다. */
 function topSongs(f = {}, limit = 10){
-  const c = {};
-  DATA.songs.forEach(s => {
-    if(isAllStatsSkip(s.id)) return;
-    if(!f.all && isRankSkip(s.id)) return;
-    if(!f.all && junkReason(s.title)) return;   // 제목이 깨진 곡은 순위에서 뺀다
-    const n = countSong(s.id, f); if(n) c[s.id] = n; });
-  return Object.entries(c).sort((a,b) => b[1]-a[1] || S[a[0]].title.localeCompare(S[b[0]].title))
-    .slice(0, limit).map(([id,n]) => ({song:S[id], n}));
+  const seenIds = new Set();
+  const rows = [];
+  DATA.songs.forEach(seed => {
+    if(seenIds.has(seed.id)) return;
+    const equivalent = typeof homeSongEquivalence === 'function'
+      ? homeSongEquivalence(seed.title, seed) : {songs:[seed]};
+    equivalent.songs.forEach(song => seenIds.add(song.id));
+    const songs = equivalent.songs.filter(song => !isAllStatsSkip(song.id)
+      && (f.all || (!isRankSkip(song.id) && !junkReason(song.title))));
+    if(!songs.length) return;
+    const appearances = statisticalEquivalentAppearances(songs, f);
+    const song = typeof homeCanonicalEquivalentSong === 'function'
+      ? homeCanonicalEquivalentSong(songs, seed) : songs[0];
+    const n = minimumSongCount(appearances.length, f, song.id);
+    if(n) rows.push({song, n});
+  });
+  return rows.sort((a,b) => b.n-a.n || a.song.title.localeCompare(b.song.title))
+    .slice(0, limit);
 }
 /** 이 곡 바로 뒤에 부른 곡 */
 function nextSongs(songId, f = {}, limit = 8){
@@ -1654,6 +1695,7 @@ const NORM_INDEX = {};
    앱 안에서는 대표 제목 하나와 별칭으로 묶어 검색·통계를 같이 잡는다. */
 const KNOWN_SONG_ALIASES = [
   {title:'모든 것 아시는 주님', aliases:['거친 길 위를 걸어갈 때도', '거친 길 위를 걸어갈때도']},
+  {title:'전능하신 나의 주 하나님은', aliases:['전능하신 나의 주 하나님']},
 ];
 /* 인도자가 통계에서 곡의 메시지를 바로 읽도록 가사·곡 설명을 대조해 정리한 핵심 주제다.
    저장소의 운영 태그(새찬양·순위 제외 등)와 섞지 않고, 대표 제목/별칭에만 붙인다. */
@@ -1859,9 +1901,24 @@ const svcName = id => SV[id] ? esc(SV[id].name) : '';
 const keyBadge = (k, base) => !k ? '' : `<span class="key${base && k!==base ? ' alt':''}" title="${base&&k!==base?'원키 '+base+'와 다른 키로 불렀습니다':''}">${esc(k)}</span>`;
 function statsSongKeys(songId, f={}){
   const counts = new Map();
-  songAppearances(songId, f).forEach(ap => {
-    String(ap.key || '').split(/\s*[-→>]\s*/).map(x=>x.trim()).filter(Boolean)
-      .forEach(k => counts.set(k, (counts.get(k) || 0) + 1));
+  const song=S[songId];
+  const equivalent = song && typeof homeSongEquivalence === 'function'
+    ? homeSongEquivalence(song.title,song) : {songs:song?[song]:[]};
+  const eligibleSongs=equivalent.songs.filter(candidate => !isAllStatsSkip(candidate.id)
+    && (f.all || (!isRankSkip(candidate.id) && !junkReason(candidate.title))));
+  /* 코드는 횟수와 달리 1·2부 원기록을 모두 본다. 같은 논리 콘티라도 실제 코드가
+     달랐다면 두 코드 모두 보여야 하기 때문이다. */
+  const rawAppearances=eligibleSongs.flatMap(candidate => (appear[candidate.id] || [])
+    .filter(ap => pass(ap,f) && !isStatsExcludedAppearance(ap)));
+  statisticalEquivalentAppearances(eligibleSongs,f).forEach(ap => {
+    const keys=typeof homeCodeTokens === 'function' ? homeCodeTokens(ap.key)
+      : String(ap.key || '').split(/\s*[-→>]\s*/).map(x=>x.trim()).filter(Boolean);
+    keys.forEach(k => counts.set(k,(counts.get(k)||0)+1));
+  });
+  rawAppearances.forEach(ap => {
+    const keys=typeof homeCodeTokens === 'function' ? homeCodeTokens(ap.key)
+      : String(ap.key || '').split(/\s*[-→>]\s*/).map(x=>x.trim()).filter(Boolean);
+    keys.forEach(k => { if(!counts.has(k)) counts.set(k,0); });
   });
   return [...counts.keys()].sort((a,b)=>(counts.get(b)-counts.get(a)) || a.localeCompare(b));
 }
@@ -7920,14 +7977,26 @@ function homeServiceNewSongs(serviceIds){
     || a.song.title.localeCompare(b.song.title,'ko'));
 }
 function homeRecentPopularSongs(serviceIds, since, limit=20){
-  return topSongs({since, serviceIds}, DATA.songs.length)
-    .filter(row => {
-      const title=norm(row.song.title);
-      return !(title.includes(norm('예수 우리 왕이여')) && title.includes(norm('함께 지어져가네')));
-    })
-    .map(row => ({...row, last:lastSung(row.song.id, {since, serviceIds}) || ''}))
-    .sort((a,b) => b.n-a.n || b.last.localeCompare(a.last)
-      || a.song.title.localeCompare(b.song.title, 'ko')).slice(0,limit);
+  const filter={since,serviceIds};
+  const seenIds=new Set();
+  const rows=[];
+  DATA.songs.forEach(seed => {
+    if(seenIds.has(seed.id)) return;
+    const equivalent=homeSongEquivalence(seed.title,seed);
+    equivalent.songs.forEach(song => seenIds.add(song.id));
+    const songs=equivalent.songs.filter(song => !isAllStatsSkip(song.id)
+      && !isRankSkip(song.id) && !junkReason(song.title));
+    if(!songs.length) return;
+    const song=homeCanonicalEquivalentSong(songs,seed);
+    const title=norm(song.title);
+    if(title.includes(norm('예수 우리 왕이여')) && title.includes(norm('함께 지어져가네'))) return;
+    const appearances=statisticalEquivalentAppearances(songs,filter);
+    if(!appearances.length) return;
+    const last=appearances.reduce((latest,ap) => String(ap.date || '') > latest ? String(ap.date) : latest,'');
+    rows.push({song,n:appearances.length,last,codes:homeObservedCodesFromSongs(songs,filter)});
+  });
+  return rows.sort((a,b) => b.n-a.n || b.last.localeCompare(a.last)
+    || a.song.title.localeCompare(b.song.title,'ko')).slice(0,limit);
 }
 function homeCodeTokens(value){
   const raw = String(value || '').replace(/♭/g,'b').replace(/♯/g,'#').trim();
@@ -7935,16 +8004,19 @@ function homeCodeTokens(value){
   return raw.split(/(?:\s+|→|->|[-–—/,;+|()])/u).map(token => token.trim())
     .filter(token => /^[A-G](?:#|b)?m?$/.test(token));
 }
-function homeObservedCodes(song, filter = {}){
-  if(!song || song.recommendationVirtual) return [];
+function homeObservedCodesFromSongs(songs, filter = {}){
   const found = new Set();
-  homeSongEquivalence(song.title, song).songs.forEach(candidate =>
+  (songs || []).forEach(candidate =>
     (appear[candidate.id] || [])
       .filter(ap => pass(ap, filter) && !isStatsExcludedAppearance(ap)).forEach(ap => {
       homeCodeTokens(ap.key).forEach(code => found.add(code));
     }));
   return [...found].sort((a,b) => homeRecommendationKeyOrder(a) - homeRecommendationKeyOrder(b)
     || a.localeCompare(b));
+}
+function homeObservedCodes(song, filter = {}){
+  if(!song || song.recommendationVirtual) return [];
+  return homeObservedCodesFromSongs(homeSongEquivalence(song.title, song).songs,filter);
 }
 function homeObservedCodeLabel(codes){
   if(!Array.isArray(codes)) return '';
@@ -7972,6 +8044,13 @@ function homeSongEquivalence(title, song=null){
   }
   return {names, songs};
 }
+function homeCanonicalEquivalentSong(songs, fallback=null){
+  for(const rule of KNOWN_SONG_ALIASES){
+    const canonical=songs.find(song => norm(song.title) === norm(rule.title));
+    if(canonical) return canonical;
+  }
+  return fallback && songs.some(song => song.id === fallback.id) ? fallback : songs[0];
+}
 function homeRecentlyLearnedRows(limit=5){
   const rows = [];
   const seenNames = new Set();
@@ -7981,7 +8060,7 @@ function homeRecentlyLearnedRows(limit=5){
     const equivalent = homeSongEquivalence(title, song);
     if([...equivalent.names].some(name => seenNames.has(name))) return;
     equivalent.names.forEach(name => seenNames.add(name));
-    const history = statisticalAppearances(equivalent.songs.flatMap(candidate => appear[candidate.id] || []));
+    const history = statisticalEquivalentAppearances(equivalent.songs);
     const last = history.reduce((latest, ap) => String(ap.date || '') > latest ? String(ap.date) : latest, '');
     const minimumCount = song ? Number(HOME_CURATED_LEARNED_MIN_COUNTS.get(title) || 0) : 0;
     const displayCount = Math.max(history.length, minimumCount);
@@ -8097,7 +8176,7 @@ function homeRecommendationGroup(label, songs, kind){
 function homeServiceBoard(spec, since){
   if(!spec?.serviceIds?.length) return `<div class="home-service-board"><div class="empty">예배 정보를 확인해 주세요.</div></div>`;
   const top = homeRecentPopularSongs(spec.serviceIds, since, 20)
-    .map(row => ({title:row.song.title, codes:homeObservedCodes(row.song, {since, serviceIds:spec.serviceIds}),
+    .map(row => ({title:row.song.title, codes:row.codes,
       meta:`${row.n}회 · ${fmtShort(row.last)}`}));
   const fresh = homeServiceNewSongs(spec.serviceIds).slice(0, NEW_SONG_HOME_LIMIT)
     .map(({song, progress}) => ({title:song.title, codes:homeObservedCodes(song),
@@ -8155,7 +8234,12 @@ function homeAdminTools(){
 
 /* 인도자 홈: 우리 교회가 실제로 한 번이라도 부른 곡 전체 */
 const LEADER_SONG_ALPHA_GROUPS = ['전체','가','나','다','라','마','바','사','아','자','차','카','타','파','하','기타'];
-const LEADER_SONG_KEY_GROUPS = ['전체','C','D','E','F','G','A','B','기타'];
+const LEADER_SONG_KEY_GROUPS = ['전체','C','C#','Db','D','D#','Eb','E','F','F#','Gb','G','G#','Ab','A','A#','Bb','B','Cb','기타'];
+const LEADER_MINOR_RELATIVE_MAJOR = new Map([
+  ['Am','C'],['Em','G'],['Bm','D'],['F#m','A'],['C#m','E'],['G#m','B'],
+  ['D#m','F#'],['A#m','C#'],['Dm','F'],['Gm','Bb'],['Cm','Eb'],['Fm','Ab'],
+  ['Bbm','Db'],['Ebm','Gb'],['Abm','Cb'],
+]);
 let leaderChurchSongView = {mode:'alpha', group:'전체', query:''};
 function leaderSongAlphaGroup(title){
   const ch = String(title || '').trim()[0] || '';
@@ -8165,17 +8249,11 @@ function leaderSongAlphaGroup(title){
   return ['가','가','나','다','다','라','마','바','바','사','사','아','자','자','차','카','타','파','하'][initial] || '기타';
 }
 function leaderSongKeyGroups(songId){
-  const groups = new Set();
-  const naturalKeys = ['C','D','E','F','G','A','B'];
-  songAppearances(songId).forEach(ap => {
-    const key = String(ap.key || '').replace(/♭/g,'b').replace(/♯/g,'#');
-    const matches = [...key.matchAll(/([A-G])([#b]?)(?=[m0-9+\-/,\s()]|$)/gi)];
-    matches.forEach(match => {
-      const letter = match[1].toUpperCase();
-      groups.add(letter);
-      if(match[2]) groups.add(naturalKeys[(naturalKeys.indexOf(letter) + 1) % naturalKeys.length]);
-    });
-  });
+  return leaderCodeKeyGroups(leaderSongObservedKeys(songId));
+}
+function leaderCodeKeyGroups(codes){
+  const groups=new Set((codes || []).map(code => LEADER_MINOR_RELATIVE_MAJOR.get(code)
+    || String(code || '').replace(/m$/,'')).filter(Boolean));
   return groups.size ? [...groups] : ['기타'];
 }
 function leaderSongObservedKeys(songId){
@@ -8192,12 +8270,23 @@ function leaderSongObservedKeys(songId){
   });
 }
 function leaderChurchSongRows(){
-  return DATA.songs.map(song => {
-    const appearances = songAppearances(song.id);
-    return {song, count:appearances.length, alpha:leaderSongAlphaGroup(song.title),
-      keys:leaderSongKeyGroups(song.id), codes:leaderSongObservedKeys(song.id)};
-  }).filter(row => row.count > 0 && !isAllStatsSkip(row.song.id) && !junkReason(row.song.title))
-    .sort((a,b) => String(a.song.title).localeCompare(String(b.song.title), 'ko', {numeric:true}));
+  const seenIds=new Set();
+  const rows=[];
+  DATA.songs.forEach(seed => {
+    if(seenIds.has(seed.id)) return;
+    const equivalent=homeSongEquivalence(seed.title,seed);
+    equivalent.songs.forEach(song => seenIds.add(song.id));
+    const songs=equivalent.songs.filter(song => !isAllStatsSkip(song.id)
+      && !isRankSkip(song.id) && !junkReason(song.title));
+    if(!songs.length) return;
+    const appearances=statisticalEquivalentAppearances(songs);
+    if(!appearances.length) return;
+    const song=homeCanonicalEquivalentSong(songs,seed);
+    const codes=homeObservedCodesFromSongs(songs);
+    rows.push({song,count:appearances.length,alpha:leaderSongAlphaGroup(song.title),
+      keys:leaderCodeKeyGroups(codes),codes});
+  });
+  return rows.sort((a,b) => String(a.song.title).localeCompare(String(b.song.title),'ko',{numeric:true}));
 }
 function leaderChurchSongSearchScore(song, rawQuery){
   const query = norm(rawQuery);
