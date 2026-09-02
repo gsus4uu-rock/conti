@@ -716,9 +716,9 @@ hr.sep{border:none; border-top:1px solid var(--line); margin:16px 0}
   .leader-church-song-groups{flex-wrap:wrap;overflow:visible;padding-bottom:10px}
   .leader-church-song-group{flex:0 0 auto}
   .leader-church-song-list{columns:1;max-height:none;overflow:visible;padding-right:0}
-  .home-snapshot-list li .home-song-title{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;line-height:1.4}
-  .home-snapshot-list li .home-song-title em{white-space:normal;overflow:visible;text-overflow:clip}
-  .home-snapshot-list li .home-song-title i{justify-self:start}
+  .home-snapshot-list li .home-song-title{display:flex;flex-wrap:nowrap;gap:6px;line-height:1.4}
+  .home-snapshot-list li .home-song-title em{flex:0 1 auto;min-width:0;white-space:normal;overflow:visible;text-overflow:clip}
+  .home-snapshot-list li .home-song-title i{flex:1 1 auto;min-width:0}
   .home-service-board-h{padding:15px 16px 12px}
   .home-snapshot-block{padding:15px 16px}
   .home-request-strip{padding:14px 16px}
@@ -7838,6 +7838,7 @@ window.addEventListener('keydown', ev=>{
 
 const HOME_FLOW_DAYS = 365;
 const HOME_CURATED_LEARNED_TITLES = ['십자가를 참으신'];
+const HOME_CURATED_LEARNED_MIN_COUNTS = new Map([['십자가를 참으신',4]]);
 const HOME_CURATED_FORGOTTEN_TITLES = [
   '나 주님을 모른다 하여도', '내 삶을 깨뜨립니다', '주님의 시선', '모든 걸음 되시네',
   '나는 주님께 속한 자', '나의 하나님', '송축해 내 영혼', '원하고 바라고 기도합니다',
@@ -7982,8 +7983,10 @@ function homeRecentlyLearnedRows(limit=5){
     equivalent.names.forEach(name => seenNames.add(name));
     const history = statisticalAppearances(equivalent.songs.flatMap(candidate => appear[candidate.id] || []));
     const last = history.reduce((latest, ap) => String(ap.date || '') > latest ? String(ap.date) : latest, '');
+    const minimumCount = song ? Number(HOME_CURATED_LEARNED_MIN_COUNTS.get(title) || 0) : 0;
+    const displayCount = Math.max(history.length, minimumCount);
     rows.push({title:displayTitle, codes:homeObservedCodes(song),
-      meta:history.length && last ? `${history.length}회 · ${fmtShort(last)}` : ''});
+      meta:displayCount ? `${displayCount}회${last ? ` · ${fmtShort(last)}` : ''}` : ''});
   });
   recentlyLearnedNewSongs().forEach(({song, progress}) => {
     const equivalent = homeSongEquivalence(song.title, song);
