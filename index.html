@@ -1671,45 +1671,45 @@ const CURATED_SONG_TOPICS = new Map(Object.entries({
   '날 향한 계획':['섭리','소망','인도하심'],
   '내 몸은 구주의 성전이니':['성령','거룩','헌신'],
   '내 삶은 주의 것':['주권','헌신','순종'],
-  '내 삶의 이유라':['예수','헌신','사랑'],
+  '내 삶의 이유라':['헌신','사랑','고백'],
   '내 영혼이 은총입어':['은혜','천국','기쁨'],
   '내 영혼이 지치고':['위로','회복','성령'],
   '날 세우네':['위로','회복','성령'],
   '내 주를 가까이':['임재','갈망','헌신'],
-  '내 진정 사모하는':['예수','사랑','만족'],
+  '내 진정 사모하는':['사랑','갈망','만족'],
   '내가 늘 의지하는 예수':['믿음','의지','구원'],
   '내가 매일 기쁘게':['성령','기쁨','동행'],
   '너를 사랑한다':['사랑','위로','정체성'],
   '노래 할 수 없는 곳이라 해도':['믿음','찬양','헌신'],
   '놀라운 은혜':['은혜','사랑','감사'],
   '다와서 찬양해':['찬양','경배','공동체'],
-  '다윗의 노래':['목자','위로','신뢰'],
+  '다윗의 노래':['인도하심','위로','신뢰'],
   '더 원합니다':['임재','갈망','성령'],
   '모든 상황 속에서':['신뢰','예배','감사'],
   '모든 생명들아 소리쳐':['구원','부활','경배'],
   '변찮는 주님의 사랑과':['사랑','보혈','확신'],
   '비 준비하시니':['섭리','창조','신실하심'],
-  '사랑하는 나의 아버지':['하나님아버지','사랑','경배'],
+  '사랑하는 나의 아버지':['사랑','경배','신뢰'],
   '사랑한다 말하시네':['사랑','정체성','회복'],
   '사랑합니다 주님':['사랑','경배','고백'],
   '산과 시내와':['갈망','임재','예배'],
   '성령이 오셨네':['성령','복음','자유'],
   '소망 없고 빛도 없는':['구원','십자가','소망'],
   '수많은 무리들 줄지어':['선교','구원','헌신'],
-  '슬픈 마음 있는 사람':['위로','구원','예수의이름'],
-  '슬픈 마음 있는 자':['위로','구원','예수의이름'],
+  '슬픈 마음 있는 사람':['위로','구원','믿음'],
+  '슬픈 마음 있는 자':['위로','구원','믿음'],
   '아주 먼 옛날 하늘에서는':['사랑','구원','복음'],
   '약할 때 강함 되시네':['은혜','능력','믿음'],
   '예배자입니다':['예배','헌신','정체성'],
   '예배합니다':['예배','경배','헌신'],
   '예수 열방의 소망':['소망','선교','구원'],
-  '예수 우리 왕이여':['왕','임재','경배'],
-  '예수 우리 왕이여+함께지어져가네':['왕','교회','임재'],
-  '오직 예수':['예수','구원','능력'],
-  '왕이신 나의 하나님':['왕','경배','찬양'],
+  '예수 우리 왕이여':['주권','임재','경배'],
+  '예수 우리 왕이여+함께지어져가네':['주권','교회','임재'],
+  '오직 예수':['구원','믿음','능력'],
+  '왕이신 나의 하나님':['주권','경배','찬양'],
   '우리의 기도':['기도','하나님나라','공동체'],
   '우리 함께 기도해':['기도','성령','부흥'],
-  '전능하신 나의 주 하나님은':['전능','믿음','기도'],
+  '전능하신 나의 주 하나님은':['능력','믿음','기도'],
   '주 품에':['평안','위로','신뢰'],
   '주가 보이신 생명의 길':['십자가','순종','헌신'],
   '주가 일 하시네':['신뢰','섭리','소망'],
@@ -1724,7 +1724,7 @@ const CURATED_SONG_TOPICS = new Map(Object.entries({
   '마음의 예배':['예배','진실','헌신'],
   '하나님의 나팔소리':['재림','소망','승리'],
   '내 마음을 가득 채운':['성령','기쁨','찬양'],
-  '믿음이 없이는':['믿음','순종','하나님기쁨'],
+  '믿음이 없이는':['믿음','순종','예배'],
   '주 발 앞에 나 엎드려':['경배','회개','헌신'],
   '주 이름 찬양':['찬양','주권','신뢰'],
   '나를 택하시고 부르신 예수님':['부르심','구원','헌신'],
@@ -1759,7 +1759,15 @@ const CURATED_SONG_TOPICS = new Map(Object.entries({
 }).map(([title,tags]) => [norm(title), tags]));
 
 const NON_TOPIC_TAGS = new Set(['새찬양','순위 제외','추천·통계 제외','우리교회 추천찬양',
-  '담임목사 신청곡','추천곡 제외','잊혀진 찬양 제외','검수대장 복구곡','제목 수동 복구']);
+  '담임목사 신청곡','추천곡 제외','잊혀진 찬양 제외','검수대장 복구곡','제목 수동 복구',
+  '하나님아버지','예수의이름','예수','왕','전능','목자','하나님기쁨']);
+
+const isSearchableTopicTag = tag => !!tag && !NON_TOPIC_TAGS.has(tag);
+function searchableTopicTags(song){
+  if(!song) return [];
+  return [...new Set([...(song.autoTags||[]),...(song.manualTags||[])])]
+    .filter(isSearchableTopicTag);
+}
 
 function curatedTopicsFor(song){
   if(!song) return [];
@@ -1774,15 +1782,15 @@ function curatedTopicsFor(song){
 function songTopicTags(song, limit=3){
   if(!song) return [];
   const curated=curatedTopicsFor(song);
-  const stored=[...(song.autoTags||[]),...(song.manualTags||[])]
-    .filter(tag=>tag && !NON_TOPIC_TAGS.has(tag));
+  const stored=searchableTopicTags(song);
   return [...new Set([...curated,...stored])].slice(0,limit);
 }
 
 function applyCuratedSongTopics(){
   DATA.songs.forEach(song => {
     const topics=curatedTopicsFor(song);
-    if(topics.length) song.autoTags=[...new Set([...topics,...(song.autoTags||[])])];
+    song.autoTags=[...new Set([...topics,...(song.autoTags||[])])]
+      .filter(isSearchableTopicTag);
   });
 }
 function applyKnownSongAliases(){
@@ -1832,7 +1840,7 @@ function searchSongs(q){
     s.aliases.some(a => norm(a).includes(n)) ||
     norm(s.artist||'').includes(n) ||
     norm(s.lyrics||'').includes(n) ||
-    s.autoTags.concat(s.manualTags).some(t => norm(t).includes(n))
+    searchableTopicTags(s).some(t => norm(t).includes(n))
   ));
 }
 /** 검색어가 가사에서 걸렸는지 알려준다 (검색 결과에 「가사에서 찾음」을 붙이려고) */
@@ -2129,8 +2137,8 @@ function flashTo(id){
   e.classList.add('flash');
 }
 function tagChips(s){
-  return s.autoTags.map(t=>`<span class="tag auto">${esc(t)}</span>`).join('')
-       + s.manualTags.map(t=>`<span class="tag man">${esc(t)}</span>`).join('');
+  return searchableTopicTags(s)
+    .map(t=>`<span class="tag ${(s.manualTags||[]).includes(t)?'man':'auto'}">${esc(t)}</span>`).join('');
 }
 /* 한 곡에 악보가 키별로 여러 장 달립니다. 곡을 쪼개지 않습니다.
    (곡을 「은혜(G)」「은혜(A)」로 나누면 각각 10회가 되어 20회 부른 곡이 순위에서 사라집니다.) */
@@ -2318,20 +2326,26 @@ const TAG_RULES = [
   ['치유',       ['치유','고치','낫게','회복','싸매']],
   ['헌신',       ['헌신','드립니','드리리','바치','올려 드']],
   ['결단',       ['결단','따르리','순종','일어나 ','나서리']],
+  ['순종',       ['순종','말씀 따라','주의 길을 따라','뜻대로']],
   ['선교',       ['선교','열방','민족','땅 끝','땅끝','복음을','전하리']],
-  ['예수의이름', ['예수','그리스도','임마누엘','주의 이름','그 이름']],
+  ['복음',       ['복음','기쁜 소식','대속','구원의 소식']],
   ['승리',       ['승리','이기','정복','권세','승리하']],
   ['부활',       ['부활','살아나','다시 사','무덤','일어나셨']],
   ['성탄',       ['성탄','아기 예수','베들레헴','구유','탄생']],
   ['기도',       ['기도','부르짖','간구','아뢰','무릎 꿇']],
   ['인도하심',   ['인도','이끄','손 잡','걸어가','동행','발걸음']],
-  ['왕',         ['왕이신','왕 되신','왕되신','보좌','다스리','통치']],
+  ['주권',       ['왕이신','왕 되신','왕되신','보좌','다스리','통치']],
   ['영광',       ['영광','존귀','권세와','높은 곳']],
   ['평안',       ['평안','안식','쉼을','고요','잔잔']],
   ['축복',       ['축복','복을','복 주','형통','넉넉']],
   ['구원',       ['구원','건지','살리셨','속량','대속']],
   ['말씀',       ['말씀','성경','약속하','기록된']],
   ['교회',       ['교회','성도','우리 함께','한 몸','지체']],
+  ['회복',       ['회복','새롭게','새 힘','다시 일어']],
+  ['부흥',       ['부흥','다시 살리','새롭게 하소서']],
+  ['재림',       ['재림','다시 오실','주 오실','나팔 소리']],
+  ['임재',       ['임재','함께 계시','이곳에 계시','주의 영이']],
+  ['갈망',       ['갈망','목마르','더 원하','사모하']],
 ];
 
 /** 가사에서 주제 태그를 뽑는다. 많이 걸린 순으로 최대 6개. */
@@ -7823,6 +7837,7 @@ window.addEventListener('keydown', ev=>{
 
 
 const HOME_FLOW_DAYS = 365;
+const HOME_CURATED_LEARNED_TITLES = ['십자가를 참으신'];
 const HOME_CURATED_FORGOTTEN_TITLES = [
   '나 주님을 모른다 하여도', '내 삶을 깨뜨립니다', '주님의 시선', '모든 걸음 되시네',
   '나는 주님께 속한 자', '나의 하나님', '송축해 내 영혼', '원하고 바라고 기도합니다',
@@ -7921,11 +7936,9 @@ function homeCodeTokens(value){
 }
 function homeObservedCodes(song, filter = {}){
   if(!song || song.recommendationVirtual) return [];
-  const names = new Set([song.title, ...(song.aliases || [])].map(norm).filter(Boolean));
   const found = new Set();
-  DATA.songs.filter(candidate => [candidate.title, ...(candidate.aliases || [])]
-    .map(norm).some(name => names.has(name)))
-    .forEach(candidate => (appear[candidate.id] || [])
+  homeSongEquivalence(song.title, song).songs.forEach(candidate =>
+    (appear[candidate.id] || [])
       .filter(ap => pass(ap, filter) && !isStatsExcludedAppearance(ap)).forEach(ap => {
       homeCodeTokens(ap.key).forEach(code => found.add(code));
     }));
@@ -7937,6 +7950,49 @@ function homeObservedCodeLabel(codes){
   return codes.length
     ? `<i aria-label="실제로 부른 코드 ${esc(codes.join(', '))}">${esc(codes.join(' · '))}</i>`
     : '<i class="missing">코드 미기록</i>';
+}
+function homeSongEquivalence(title, song=null){
+  const names = new Set([title, song?.title, ...(song?.aliases || [])].filter(Boolean).map(norm).filter(Boolean));
+  const songs = [];
+  let changed = true;
+  while(changed){
+    changed = false;
+    DATA.songs.forEach(candidate => {
+      if(songs.some(row => row.id === candidate.id)) return;
+      const candidateNames = [candidate.title, ...(candidate.aliases || [])].map(norm).filter(Boolean);
+      if(!candidateNames.some(name => names.has(name))) return;
+      songs.push(candidate);
+      candidateNames.forEach(name => {
+        if(names.has(name)) return;
+        names.add(name);
+        changed = true;
+      });
+    });
+  }
+  return {names, songs};
+}
+function homeRecentlyLearnedRows(limit=5){
+  const rows = [];
+  const seenNames = new Set();
+  HOME_CURATED_LEARNED_TITLES.forEach(title => {
+    const song = S[NORM_INDEX[norm(title)]] || null;
+    const displayTitle = title;
+    const equivalent = homeSongEquivalence(title, song);
+    if([...equivalent.names].some(name => seenNames.has(name))) return;
+    equivalent.names.forEach(name => seenNames.add(name));
+    const history = statisticalAppearances(equivalent.songs.flatMap(candidate => appear[candidate.id] || []));
+    const last = history.reduce((latest, ap) => String(ap.date || '') > latest ? String(ap.date) : latest, '');
+    rows.push({title:displayTitle, codes:homeObservedCodes(song),
+      meta:history.length && last ? `${history.length}회 · ${fmtShort(last)}` : ''});
+  });
+  recentlyLearnedNewSongs().forEach(({song, progress}) => {
+    const equivalent = homeSongEquivalence(song.title, song);
+    if([...equivalent.names].some(name => seenNames.has(name)) || rows.length >= limit) return;
+    equivalent.names.forEach(name => seenNames.add(name));
+    rows.push({title:song.title, codes:homeObservedCodes(song),
+      meta:`${progress.count}회 · ${fmtShort(progress.completedAt)}`});
+  });
+  return rows.slice(0, limit);
 }
 function homeSimpleList(rows, emptyText, extraClass=''){
   return rows.length ? `<ol class="home-snapshot-list${extraClass ? ` ${extraClass}` : ''}">${rows.map(row => `
@@ -8043,9 +8099,7 @@ function homeServiceBoard(spec, since){
   const fresh = homeServiceNewSongs(spec.serviceIds).slice(0, NEW_SONG_HOME_LIMIT)
     .map(({song, progress}) => ({title:song.title, codes:homeObservedCodes(song),
       meta:`${progress.count}/${progress.goal}회 · ${progress.firstLeader || '시작 확인 필요'}`}));
-  const learned = recentlyLearnedNewSongs().slice(0, 5)
-    .map(({song, progress}) => ({title:song.title, codes:homeObservedCodes(song),
-      meta:`${progress.count}회 · ${fmtShort(progress.completedAt)}`}));
+  const learned = homeRecentlyLearnedRows(5);
   const forgotten = homeCuratedForgottenSongs();
   const sermonTop = homeCuratedSermonSongs();
   const requests = requestedSongs();
@@ -8349,7 +8403,7 @@ function vSetlists(){
         <div class="spacer"></div><button class="btn pri sm" onclick="go('new')">＋ 새 콘티</button></div>
       <div class="card-b tight"><div class="t-scroll stk-w"><table class="stk">
         <thead><tr><th>날짜</th><th>예배</th><th>인도자</th><th>찬양</th><th class="num">수정</th></tr></thead>
-        <tbody>${list.slice(0,60).map(st=>`
+        <tbody>${list.map(st=>`
           <tr class="clk" onclick="go('setlist/${st.id}')">
             <td class="mono hd">${fmtShort(st.date)} <span class="mob-only">${svcPill(st.serviceId)}
               <span class="sub">${esc(L[st.leaderId].name)} · ${st.items.length}곡</span></span></td>
@@ -8360,7 +8414,6 @@ function vSetlists(){
               ? `<button class="btn sm" onclick="event.stopPropagation();editSetlist('${st.id}')">수정</button>`
               : `<span class="sub no-stk">${st.items.length}곡</span>`}</td>
           </tr>`).join('')}</tbody></table></div>
-        ${list.length>60?`<div class="empty">최근 60개만 표시했습니다 (전체 ${list.length}개)</div>`:''}
       </div>
     </div>
   </div>`;
@@ -9171,7 +9224,7 @@ function libRows(){
   let list = searchSongs(libF.q);
   if(libF.key) list = list.filter(s=>s.key===libF.key);
   if(libF.cat) list = list.filter(s=>s.category===libF.cat);
-  if(libF.tag) list = list.filter(s=>s.autoTags.concat(s.manualTags).includes(libF.tag));
+  if(libF.tag) list = list.filter(s=>searchableTopicTags(s).includes(libF.tag));
   if(libF.cutOnly) list = list.filter(s=>needsCut(s, map));
   const rows = list.map(s=>({s, n:countSong(s.id), last:lastSung(s.id),
                              added:songAddedAt(s), cut:needsCut(s, map), map}));
@@ -9199,7 +9252,7 @@ function vLibrary(){
   const cutTodo = new Set(Object.keys(smap).filter(p=>smap[p]>1)).size;
   const keys = [...new Set(DATA.songs.map(s=>s.key))].sort();
   const cats = [...new Set(DATA.songs.map(s=>s.category))];
-  const tags = [...new Set(DATA.songs.flatMap(s=>s.autoTags.concat(s.manualTags)))].sort();
+  const tags = [...new Set(DATA.songs.flatMap(searchableTopicTags))].sort();
   return `
   <div class="page-h"><h1>곡 도서관</h1>
     <p>제목·가사·태그로 검색하고 조성·성격으로 필터링합니다</p></div>
@@ -9254,7 +9307,7 @@ function libTableHtml(rows){
     <thead><tr><th style="width:92px">악보</th><th>곡명</th><th style="width:82px">키</th><th>태그</th></tr></thead>
     <tbody>${rows.map(r=>{
       const sh = (r.s.sheets||[]).find(x=>x.origin) || (r.s.sheets||[])[0];
-      const tags = [...new Set((r.s.autoTags||[]).concat(r.s.manualTags||[]))];
+      const tags = searchableTopicTags(r.s);
       return `<tr class="clk" onclick="go('song/${r.s.id}')">
       <td data-l="악보">${sh ? `<div role="button" tabindex="0" aria-label="${esc(r.s.title)} 악보 크게 보기"
           data-sheet-thumb="${esc(sh.path)}" data-sheet="${esc(sh.path)}" data-type="${esc(sh.fileType)}" data-nozoom="1"
